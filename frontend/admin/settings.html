@@ -1,0 +1,86 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Settings — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="panel">
+        <div class="panel-head"><h3>General settings</h3></div>
+        <div class="panel-body pad">
+          <form id="settingsForm" style="max-width:480px;">
+            <div class="field">
+              <label for="s_site_name">System name</label>
+              <input type="text" id="s_site_name">
+            </div>
+            <div class="field">
+              <label for="s_currency_symbol">Currency symbol</label>
+              <input type="text" id="s_currency_symbol" placeholder="e.g. TSh">
+            </div>
+            <div class="field">
+              <label for="s_default_low_stock_threshold">Default low-stock threshold for new products</label>
+              <input type="number" id="s_default_low_stock_threshold" min="0">
+            </div>
+            <div id="settingsAlert"></div>
+            <button type="submit" class="btn btn-primary" id="settingsSaveBtn">Save Settings</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-core.js"></script>
+<script>
+(async () => {
+    const admin = await guardAdminPage();
+    if (!admin) return;
+    if (blockWorkers(admin)) return;
+    renderAdminShell('settings', 'Settings', admin);
+
+    const res = await adminApi('/settings.php');
+    if (res.success) {
+        const s = res.settings;
+        document.getElementById('s_site_name').value = s.site_name || '';
+        document.getElementById('s_currency_symbol').value = s.currency_symbol || '';
+        document.getElementById('s_default_low_stock_threshold').value = s.default_low_stock_threshold || '';
+    }
+
+    document.getElementById('settingsForm').addEventListener('submit', async (e) => {
+        e.preventDefault();
+        const alertBox = document.getElementById('settingsAlert');
+        alertBox.innerHTML = '';
+        const btn = document.getElementById('settingsSaveBtn');
+        btn.disabled = true;
+        btn.innerHTML = '<span class="spinner"></span> Saving…';
+
+        const payload = {
+            site_name: document.getElementById('s_site_name').value.trim(),
+            currency_symbol: document.getElementById('s_currency_symbol').value.trim(),
+            default_low_stock_threshold: document.getElementById('s_default_low_stock_threshold').value,
+        };
+
+        const res = await adminApi('/settings.php', { method: 'PUT', body: payload });
+        btn.disabled = false;
+        btn.textContent = 'Save Settings';
+
+        if (!res.success) {
+            alertBox.innerHTML = `<div class="alert alert-error">${adminEscapeHtml(res.message)}</div>`;
+            return;
+        }
+        adminToast('Settings saved.', 'success');
+    });
+})();
+</script>
+</body>
+</html>

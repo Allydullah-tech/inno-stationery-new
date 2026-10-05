@@ -1,0 +1,140 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Debts / Credit — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="debt-summary-grid" id="debtSummaryGrid">
+        <div class="skeleton" style="height:76px;"></div>
+        <div class="skeleton" style="height:76px;"></div>
+        <div class="skeleton" style="height:76px;"></div>
+        <div class="skeleton" style="height:76px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Customer debts &amp; credit sales</h3>
+          <div class="filter-row">
+            <div class="search-input-wrap">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="20" y1="20" x2="15.5" y2="15.5"/></svg>
+              <input type="text" id="debtSearch" placeholder="Search by customer name or phone…" autocomplete="off">
+            </div>
+            <select id="debtStatusFilter">
+              <option value="">All statuses</option>
+              <option value="pending">Pending</option>
+              <option value="partial">Partially Paid</option>
+              <option value="overdue">Overdue</option>
+              <option value="paid">Paid</option>
+            </select>
+            <select id="debtPeriodFilter">
+              <option value="all">All time</option>
+              <option value="daily">Today</option>
+              <option value="weekly">This week</option>
+              <option value="monthly">This month</option>
+              <option value="custom">Custom range</option>
+            </select>
+            <span id="debtCustomRangeWrap" style="display:none;gap:10px;">
+              <input type="date" id="debtFrom">
+              <input type="date" id="debtTo">
+            </span>
+            <button class="btn btn-outline btn-sm" id="debtFilterBtn">Filter</button>
+          </div>
+        </div>
+        <div class="panel-body table-wrap">
+          <table class="data-table">
+            <thead><tr>
+              <th>Customer</th><th>Phone</th><th>Original</th><th>Paid</th><th>Balance</th>
+              <th>Deadline</th><th>Sale Date</th><th>Status</th><th></th>
+            </tr></thead>
+            <tbody id="debtsTbody"><tr><td colspan="9" style="text-align:center;padding:30px;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Debt detail / record payment / payment history modal -->
+<div class="modal-backdrop" id="debtModalBackdrop">
+  <div class="modal" style="max-width:600px;">
+    <div class="modal-head">
+      <h3 id="debtModalTitle">Debt details</h3>
+      <button class="modal-close" id="debtModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+
+      <div class="debt-detail-grid" id="debtDetailGrid"></div>
+
+      <div id="debtRecordPaymentWrap">
+        <button class="btn btn-primary btn-block" id="showPaymentFormBtn">+ Record Payment</button>
+      </div>
+
+      <form id="paymentForm" style="display:none;margin-top:14px;border-top:1px dashed var(--line-soft);padding-top:14px;">
+        <h4 style="font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:10px;">Record a payment</h4>
+        <div class="field-row">
+          <div class="field">
+            <label for="payAmount">Amount Paid (TSh) *</label>
+            <input type="number" id="payAmount" min="1" step="0.01" required>
+            <div class="hint" id="payBalanceHint"></div>
+          </div>
+          <div class="field">
+            <label for="payDate">Payment Date *</label>
+            <input type="date" id="payDate" required>
+          </div>
+        </div>
+        <div class="field">
+          <label>Payment Method *</label>
+          <div class="radio-cards">
+            <label class="radio-card"><input type="radio" name="payMethod" value="cash" checked><span>Cash</span></label>
+            <label class="radio-card"><input type="radio" name="payMethod" value="mpesa"><span>M-PESA</span></label>
+            <label class="radio-card"><input type="radio" name="payMethod" value="airtel_money"><span>Airtel Money</span></label>
+            <label class="radio-card"><input type="radio" name="payMethod" value="halopesa"><span>HaloPesa</span></label>
+            <label class="radio-card"><input type="radio" name="payMethod" value="mixx_by_yas"><span>Mixx by Yas</span></label>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="payReference">Transaction / Reference No. (optional)</label>
+            <input type="text" id="payReference" placeholder="e.g. QK7X9ABC12">
+          </div>
+          <div class="field">
+            <label for="payNotes">Notes (optional)</label>
+            <input type="text" id="payNotes" placeholder="e.g. paid at the shop">
+          </div>
+        </div>
+        <div id="paymentAlert"></div>
+        <div style="display:flex;gap:10px;">
+          <button type="button" class="btn btn-outline" id="cancelPaymentBtn">Cancel</button>
+          <button type="submit" class="btn btn-green" id="savePaymentBtn" style="flex:1;">Save Payment</button>
+        </div>
+      </form>
+
+      <div style="margin-top:18px;">
+        <h4 style="font-size:12.5px;text-transform:uppercase;letter-spacing:.04em;color:var(--ink-soft);margin-bottom:8px;">Payment history</h4>
+        <div class="table-wrap">
+          <table class="payment-history-table" id="paymentHistoryTable">
+            <thead><tr><th>Date</th><th>Amount</th><th>Method</th><th>Reference</th><th>Notes</th></tr></thead>
+            <tbody></tbody>
+          </table>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-core.js"></script>
+<script src="admin-debts.js"></script>
+</body>
+</html>

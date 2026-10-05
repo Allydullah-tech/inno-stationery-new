@@ -1,0 +1,54 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Reports — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="form-card" style="margin-bottom:20px;">
+        <div class="field">
+          <label>Report period</label>
+          <div class="radio-cards">
+            <label class="radio-card"><input type="radio" name="period" value="daily" checked><span>Daily</span></label>
+            <label class="radio-card"><input type="radio" name="period" value="weekly"><span>Weekly</span></label>
+            <label class="radio-card"><input type="radio" name="period" value="monthly"><span>Monthly</span></label>
+            <label class="radio-card"><input type="radio" name="period" value="yearly"><span>Yearly</span></label>
+            <label class="radio-card"><input type="radio" name="period" value="custom"><span>Custom</span></label>
+          </div>
+        </div>
+        <div class="field-row" id="customDateRow" style="display:none;">
+          <div class="field">
+            <label for="customFrom">From</label>
+            <input type="date" id="customFrom">
+          </div>
+          <div class="field">
+            <label for="customTo">To</label>
+            <input type="date" id="customTo">
+          </div>
+        </div>
+        <div style="display:flex;gap:10px;flex-wrap:wrap;">
+          <button class="btn btn-primary" id="generateBtn">Generate Report</button>
+          <button class="btn btn-outline" id="downloadCsvBtn">Download Excel (CSV)</button>
+          <button class="btn btn-outline" id="downloadPdfBtn">Download PDF</button>
+        </div>
+      </div>
+
+      <div id="reportResult"></div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-core.js"></script>
+<script src="admin-reports.js"></script>
+</body>
+</html>

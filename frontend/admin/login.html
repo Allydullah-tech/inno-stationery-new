@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+
+<head>
+    <meta charset="UTF-8">
+    <title>Login — INNO's Stationery Internal System</title>
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <link rel="stylesheet" href="../css/admin.css">
+</head>
+
+<body class="admin-body">
+
+    <div class="auth-page">
+        <div class="auth-card">
+            <div class="auth-brand">
+                <div class="mark">I</div>
+                <h2 style="font-size:16px;margin-bottom:2px;">Staff Login</h2>
+                <p style="font-size:12px;margin:0;">INNO's Stationery — internal system</p>
+            </div>
+
+            <div id="loginAlert"></div>
+
+            <form id="loginForm">
+                <div class="field">
+                    <label for="username">Username or email</label>
+                    <input type="text" id="username" required autocomplete="username">
+                </div>
+                <div class="field">
+                    <label for="password">Password</label>
+                    <input type="password" id="password" required autocomplete="current-password">
+                </div>
+                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Log In</button>
+            </form>
+            <p style="text-align:center;">
+                <a href="index.html" style="color:#000;font-weight:600;text-decoration:none;">
+                    Back Home
+                </a>
+            </p>
+            <p style="text-align:center;margin-top:14px;font-size:12px;">
+                <a href="forgot-password.html" style="color:var(--navy);font-weight:600;">Forgot your password?</a>
+            </p>
+        </div>
+    </div>
+
+    <script src="admin-core.js"></script>
+    <script>
+        addPasswordToggle(document.getElementById('password'));
+
+        document.getElementById('loginForm').addEventListener('submit', async(e) => {
+            e.preventDefault();
+            const alertBox = document.getElementById('loginAlert');
+            alertBox.innerHTML = '';
+            const btn = document.getElementById('loginBtn');
+            btn.disabled = true;
+            btn.innerHTML = '<span class="spinner"></span> Logging in…';
+
+            const res = await fetch('../../backend/api/admin_auth.php?action=login', {
+                method: 'POST',
+                credentials: 'include',
+                headers: {
+                    'Content-Type': 'application/json'
+                },
+                body: JSON.stringify({
+                    username: document.getElementById('username').value.trim(),
+                    password: document.getElementById('password').value,
+                }),
+            });
+            const data = await res.json();
+
+            btn.disabled = false;
+            btn.textContent = 'Log In';
+
+            if (!data.success) {
+                alertBox.innerHTML = `<div class="alert alert-error">${data.message}</div>`;
+                return;
+            }
+            window.location.href = 'dashboard.html';
+        });
+
+        (async() => {
+            try {
+                const res = await fetch('../../backend/api/admin_auth.php?action=session', {
+                    credentials: 'include'
+                });
+                const data = await res.json();
+                if (data.authenticated) window.location.href = 'dashboard.html';
+            } catch (e) {}
+        })();
+    </script>
+</body>
+
+</html>

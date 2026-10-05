@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Stock — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="summary-grid" id="stockSummaryGrid">
+        <div class="skeleton" style="height:76px;"></div>
+        <div class="skeleton" style="height:76px;"></div>
+        <div class="skeleton" style="height:76px;"></div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>All stock</h3>
+          <div style="display:flex;gap:10px;flex-wrap:wrap;">
+            <div class="search-input-wrap" style="min-width:180px;">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="20" y1="20" x2="15.5" y2="15.5"/></svg>
+              <input type="text" id="stockSearch" placeholder="Search products…" autocomplete="off">
+            </div>
+            <select id="filterCategory" class="status-select"><option value="">All categories</option></select>
+            <label style="display:flex;align-items:center;gap:6px;font-size:12.5px;font-weight:600;">
+              <input type="checkbox" id="filterLowStock" style="width:auto;"> Low stock only
+            </label>
+            <button class="btn btn-primary btn-sm" id="downloadLowStockBtn" style="display:none;">Download CSV</button>
+            <button class="btn btn-primary btn-sm" id="newProductBtn">+ Add Product</button>
+          </div>
+        </div>
+        <div class="panel-body table-wrap">
+          <table class="data-table">
+            <thead><tr><th></th><th>Name</th><th>Category</th><th>Buy Price</th><th>Sell Price</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+            <tbody id="productsTbody">
+              <tr><td colspan="8" style="text-align:center;padding:30px;">Loading…</td></tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel" id="categoryPanel">
+        <div class="panel-head"><h3>Categories</h3></div>
+        <div class="panel-body pad">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;" id="categoryChipsAdmin"></div>
+          <form id="newCategoryForm" style="display:flex;gap:10px;max-width:420px;">
+            <input type="text" id="newCategoryName" placeholder="New category name" style="flex:1;padding:9px 12px;border:1.5px solid var(--line-soft);border-radius:8px;">
+            <button class="btn btn-outline btn-sm" type="submit">Add</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- Product form modal -->
+<div class="modal-backdrop" id="productModalBackdrop">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <h3 id="productModalTitle">Add Product</h3>
+      <button class="modal-close" id="productModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="productForm">
+        <input type="hidden" id="pf_id">
+        <div class="field">
+          <label for="pf_name">Product name *</label>
+          <input type="text" id="pf_name" required>
+        </div>
+        <div class="field">
+          <label for="pf_description">Description</label>
+          <textarea id="pf_description"></textarea>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="pf_buy_price">Buy price (cost, per unit) *</label>
+            <input type="number" id="pf_buy_price" min="0" step="1" required>
+          </div>
+          <div class="field">
+            <label for="pf_price">Sell price (per unit) *</label>
+            <input type="number" id="pf_price" min="0" step="1" required>
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="pf_stock">Stock quantity *</label>
+            <input type="number" id="pf_stock" min="0" step="1" required>
+          </div>
+          <div class="field">
+            <label for="pf_low_stock_threshold">Low stock alert threshold</label>
+            <input type="number" id="pf_low_stock_threshold" min="0" step="1" value="5">
+          </div>
+        </div>
+        <div class="field-row">
+          <div class="field">
+            <label for="pf_category">Category</label>
+            <select id="pf_category"><option value="">— none —</option></select>
+          </div>
+          <div class="field">
+            <label for="pf_status">Status</label>
+            <select id="pf_status">
+              <option value="active">Active</option>
+              <option value="inactive">Inactive</option>
+            </select>
+          </div>
+        </div>
+        <div class="field">
+          <label for="pf_image">Product image</label>
+          <input type="file" id="pf_image" accept=".jpg,.jpeg,.png,.webp">
+        </div>
+        <div id="productFormAlert"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="productSaveBtn">Save Product</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-core.js"></script>
+<script src="admin-stock.js"></script>
+</body>
+</html>

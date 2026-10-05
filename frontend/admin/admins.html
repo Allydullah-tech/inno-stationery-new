@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Admins &amp; Workers — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Accounts</h3>
+          <button class="btn btn-primary btn-sm" id="newAdminBtn">+ Add Admin / Worker</button>
+        </div>
+        <div class="panel-body table-wrap">
+          <table class="data-table">
+            <thead><tr><th>Name</th><th>Username</th><th>Email</th><th>Role</th><th>Status</th><th>Added</th><th></th></tr></thead>
+            <tbody id="adminsTbody"><tr><td colspan="7" style="text-align:center;padding:30px;">Loading…</td></tr></tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="panel">
+        <div class="panel-head"><h3>Your account</h3></div>
+        <div class="panel-body pad">
+          <form id="changePasswordForm" style="max-width:420px;">
+            <div class="field">
+              <label for="currentPw">Current password</label>
+              <input type="password" id="currentPw" required>
+            </div>
+            <div class="field">
+              <label for="newPw">New password (min 8 characters)</label>
+              <input type="password" id="newPw" required minlength="8">
+            </div>
+            <div id="pwAlert"></div>
+            <button type="submit" class="btn btn-outline btn-sm">Change Password</button>
+          </form>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<!-- New admin/worker modal -->
+<div class="modal-backdrop" id="adminModalBackdrop">
+  <div class="modal" style="max-width:560px;">
+    <div class="modal-head">
+      <h3>Add Admin / Worker</h3>
+      <button class="modal-close" id="adminModalClose">&times;</button>
+    </div>
+    <div class="modal-body">
+      <form id="newAdminForm">
+        <div class="field-row">
+          <div class="field">
+            <label for="na_fullname">Full name *</label>
+            <input type="text" id="na_fullname" required>
+          </div>
+          <div class="field">
+            <label for="na_username">Username *</label>
+            <input type="text" id="na_username" required>
+          </div>
+        </div>
+        <div class="field">
+          <label for="na_email">Email *</label>
+          <input type="email" id="na_email" required>
+        </div>
+        <div class="field">
+          <label for="na_password">Password (min 8 characters) *</label>
+          <input type="password" id="na_password" required minlength="8">
+        </div>
+        <div class="field">
+          <label for="na_role">Role *</label>
+          <select id="na_role">
+            <option value="worker">Worker — sales, expenses, damages, and view-only stock</option>
+            <option value="admin">Admin — full access except managing other admins</option>
+            <option value="super_admin">Super Admin — full access including managing admins</option>
+          </select>
+        </div>
+        <hr style="border:none;border-top:1px solid var(--line-soft);margin:16px 0;">
+        <p class="hint" style="margin-bottom:10px;">Security questions let this person reset their own password later.</p>
+        <div class="field">
+          <label for="na_sq1">Security question 1 *</label>
+          <select id="na_sq1" required>
+            <option value="">-- choose --</option>
+            <option>What is the name of your first pet?</option>
+            <option>What city were you born in?</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the name of your first school?</option>
+            <option>What is your favourite teacher's name?</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="na_sa1">Answer 1 *</label>
+          <input type="text" id="na_sa1" required>
+        </div>
+        <div class="field">
+          <label for="na_sq2">Security question 2 *</label>
+          <select id="na_sq2" required>
+            <option value="">-- choose --</option>
+            <option>What is the name of your first pet?</option>
+            <option>What city were you born in?</option>
+            <option>What is your mother's maiden name?</option>
+            <option>What was the name of your first school?</option>
+            <option>What is your favourite teacher's name?</option>
+          </select>
+        </div>
+        <div class="field">
+          <label for="na_sa2">Answer 2 *</label>
+          <input type="text" id="na_sa2" required>
+        </div>
+        <div id="newAdminAlert"></div>
+        <button type="submit" class="btn btn-primary btn-block" id="newAdminSaveBtn">Create Account</button>
+      </form>
+    </div>
+  </div>
+</div>
+
+<script src="admin-core.js"></script>
+<script src="admin-admins.js"></script>
+</body>
+</html>

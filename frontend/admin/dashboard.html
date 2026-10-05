@@ -1,0 +1,118 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Dashboard — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+</head>
+<body class="admin-body">
+
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="panel" style="background:linear-gradient(135deg, var(--emerald), #1F5A41); border:none; color:#fff;">
+        <div class="panel-body pad">
+          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
+            <h3 style="color:#fff;font-size:14px;margin:0;">Today's Summary — <span id="todayDateLabel"></span></h3>
+            <a href="reports.html" class="btn btn-sm" style="background:rgba(255,255,255,.18);color:#fff;box-shadow:none;">Full Reports →</a>
+          </div>
+          <div class="stat-grid" style="margin:14px 0 0;">
+            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
+              <div class="stat-label" style="color:rgba(255,255,255,.75);">Total Sales</div>
+              <div class="stat-value" style="color:#fff;" id="sumSales">—</div>
+            </div>
+            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
+              <div class="stat-label" style="color:rgba(255,255,255,.75);">Items Sold</div>
+              <div class="stat-value" style="color:#fff;" id="sumItems">—</div>
+            </div>
+            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
+              <div class="stat-label" style="color:rgba(255,255,255,.75);">Total Expenses</div>
+              <div class="stat-value" style="color:#fff;" id="sumExpenses">—</div>
+            </div>
+            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
+              <div class="stat-label" style="color:rgba(255,255,255,.75);">Net Profit (Today)</div>
+              <div class="stat-value" style="color:var(--gold);" id="sumNetProfit">—</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="stat-grid" id="stockStatGrid">
+        <div class="skeleton" style="height:80px;"></div>
+        <div class="skeleton" style="height:80px;"></div>
+        <div class="skeleton" style="height:80px;"></div>
+      </div>
+
+      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="dashGridWrap">
+        <div class="panel">
+          <div class="panel-head"><h3>Low stock items</h3><a href="stock.html?low_stock=1" class="btn btn-ghost btn-sm">View all →</a></div>
+          <div class="panel-body table-wrap">
+            <table class="data-table" id="lowStockTable">
+              <thead><tr><th>Product</th><th>Stock</th><th>Threshold</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Recent sales</h3><a href="sales.html" class="btn btn-ghost btn-sm">View all →</a></div>
+          <div class="panel-body table-wrap">
+            <table class="data-table" id="recentSalesTable">
+              <thead><tr><th>Product</th><th>Qty</th><th>Total</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+      </div>
+
+    </div>
+  </div>
+</div>
+
+<script src="admin-core.js"></script>
+<script>
+(async () => {
+    const admin = await guardAdminPage();
+    if (!admin) return;
+    renderAdminShell('dashboard', 'Dashboard', admin);
+
+    document.getElementById('todayDateLabel').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+
+    const res = await adminApi('/dashboard.php');
+    if (!res.success) { adminToast(res.message || 'Could not load dashboard.', 'error'); return; }
+
+    document.getElementById('sumSales').textContent = adminFormatMoney(res.today.total_sales);
+    document.getElementById('sumItems').textContent = res.today.total_items_sold;
+    document.getElementById('sumExpenses').textContent = adminFormatMoney(res.today.total_expenses);
+    document.getElementById('sumNetProfit').textContent = adminFormatMoney(res.today.net_profit);
+
+    document.getElementById('stockStatGrid').innerHTML = `
+      <div class="stat-card accent">
+        <div class="stat-label">Total Products</div>
+        <div class="stat-value">${res.stock.total_products}</div>
+      </div>
+      <div class="stat-card ${res.stock.low_stock_count > 0 ? 'warn' : ''}">
+        <div class="stat-label">Low Stock</div>
+        <div class="stat-value">${res.stock.low_stock_count}</div>
+        <div class="stat-sub">at or below threshold</div>
+      </div>
+      <div class="stat-card ${res.stock.out_of_stock_count > 0 ? 'danger' : ''}">
+        <div class="stat-label">Out of Stock</div>
+        <div class="stat-value">${res.stock.out_of_stock_count}</div>
+      </div>
+    `;
+
+    document.querySelector('#lowStockTable tbody').innerHTML = res.stock.low_stock_list.length
+      ? res.stock.low_stock_list.map(p => `<tr><td>${adminEscapeHtml(p.name)}</td><td>${p.stock}</td><td>${p.low_stock_threshold}</td></tr>`).join('')
+      : `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);padding:20px;">No low-stock items right now.</td></tr>`;
+
+    document.querySelector('#recentSalesTable tbody').innerHTML = res.recent_sales.length
+      ? res.recent_sales.map(s => `<tr><td>${adminEscapeHtml(s.product_name)}</td><td>${s.quantity}</td><td>${adminFormatMoney(s.total_amount)}</td></tr>`).join('')
+      : `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);padding:20px;">No sales recorded yet.</td></tr>`;
+})();
+</script>
+</body>
+</html>
