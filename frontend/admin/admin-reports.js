@@ -56,9 +56,20 @@ async function generateReport() {
         <div class="stat-card"><div class="stat-label">Items Sold</div><div class="stat-value">${s.total_items_sold}</div></div>
         <div class="stat-card warn"><div class="stat-label">Total Expenses</div><div class="stat-value">${adminFormatMoney(s.total_expenses)}</div></div>
         <div class="stat-card danger"><div class="stat-label">Damage Loss</div><div class="stat-value">${adminFormatMoney(s.total_damage_loss)}</div></div>
+        <div class="stat-card warn"><div class="stat-label">Service Materials Bought</div><div class="stat-value">${adminFormatMoney(s.service_materials_cost || 0)}</div></div>
+        <div class="stat-card"><div class="stat-label">Credit Sales</div><div class="stat-value">${adminFormatMoney(s.credit_sales || 0)}</div></div>
+        <div class="stat-card"><div class="stat-label">Debts Collected</div><div class="stat-value">${adminFormatMoney(s.debts_collected || 0)}</div></div>
         <div class="stat-card"><div class="stat-label">Net Profit</div><div class="stat-value" style="color:var(--emerald);">${adminFormatMoney(s.net_profit)}</div></div>
       </div>
-      <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Showing ${s.from} to ${s.to}</p>
+      <p style="font-size:12.5px;color:var(--ink-soft);margin-bottom:18px;">Showing ${s.from} to ${s.to}. Net profit = profit on items sold − expenses − damage loss − service materials bought.</p>
+      <div class="v3-grid-2" style="margin-bottom:18px;">
+        <div class="panel"><div class="panel-head"><h3>Top selling items</h3></div><div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Item</th><th>Qty</th><th>Revenue</th></tr></thead><tbody>
+          ${(res.top_selling || []).length ? res.top_selling.map(t => `<tr><td>${adminEscapeHtml(t.product_name)}</td><td>${t.qty}</td><td class="mono">${adminFormatMoney(t.revenue)}</td></tr>`).join('') : '<tr><td colspan="3" class="v3-muted">No sales in this period.</td></tr>'}
+        </tbody></table></div></div>
+        <div class="panel"><div class="panel-head"><h3>Where the expenses went</h3></div><div class="panel-body table-wrap"><table class="data-table"><thead><tr><th>Category</th><th>Amount</th></tr></thead><tbody>
+          ${(res.expense_breakdown || []).length ? res.expense_breakdown.map(t => `<tr><td>${adminEscapeHtml(t.category)}</td><td class="mono">${adminFormatMoney(t.amount)}</td></tr>`).join('') : '<tr><td colspan="2" class="v3-muted">No expenses in this period.</td></tr>'}
+        </tbody></table></div></div>
+      </div>
       ${unknownCostNote}
 
       <div class="panel">

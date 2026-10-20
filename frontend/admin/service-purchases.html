@@ -1,0 +1,106 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Service Materials — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+</head>
+<body class="admin-body">
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="v3-stats" id="spStats"></div>
+
+      <div class="v3-tabs" id="spTabs">
+        <button class="v3-tab active" data-tab="stock">Material stock</button>
+        <button class="v3-tab admin-only" data-tab="buy">Record purchase</button>
+        <button class="v3-tab admin-only" data-tab="history">Purchase history</button>
+        <button class="v3-tab admin-only" data-tab="profit">Service profit</button>
+      </div>
+
+      <section class="v3-panel active" id="panel-stock">
+        <div class="panel">
+          <div class="panel-head"><h3>Materials in stock</h3><span class="v3-muted">Used up automatically when a service sale lists materials</span></div>
+          <div class="panel-body table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Material</th><th>Bought</th><th>Used / lost</th><th>In stock</th><th class="admin-only">Buy price</th><th class="admin-only">Stock value</th><th class="admin-only"></th></tr></thead>
+              <tbody id="stockRows"><tr><td colspan="7" class="text-center" style="padding:30px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="v3-panel" id="panel-buy">
+        <div class="panel">
+          <div class="panel-head"><h3>New service purchase</h3><span class="v3-muted">Materials bought for printing, copying, lamination…</span></div>
+          <div class="panel-body" style="padding:16px;">
+            <div class="field-row-3">
+              <div class="field"><label for="spDate">Purchase date</label><input type="date" id="spDate"></div>
+              <div class="field"><label for="spPaid">Paid from</label>
+                <select id="spPaid"><option value="cash">Cash from the till</option><option value="online">Mobile money</option><option value="other" selected>Bank / other (not the till)</option></select></div>
+              <div class="field"><label for="spNote">Note</label><input type="text" id="spNote" maxlength="255" placeholder="Supplier, invoice…"></div>
+            </div>
+            <datalist id="matNames"></datalist>
+            <div id="buyRows"></div>
+            <div style="display:flex;justify-content:space-between;align-items:center;margin-top:12px;flex-wrap:wrap;gap:10px;">
+              <button class="btn btn-outline btn-sm" id="addRowBtn">+ Add another material</button>
+              <div>Total: <b class="v3-money" id="buyTotal" style="font-size:18px;">0</b></div>
+            </div>
+            <div id="buyAlert" style="margin-top:10px;"></div>
+            <button class="btn btn-primary" id="buySaveBtn" style="margin-top:6px;">Save purchase</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="v3-panel" id="panel-history">
+        <div class="panel">
+          <div class="panel-head"><h3>Purchase history</h3>
+            <div class="filter-row"><input type="date" id="hFrom"><input type="date" id="hTo"><input type="text" id="hSearch" placeholder="Search material…"><button class="btn btn-outline btn-sm" id="hGo">Filter</button></div></div>
+          <div class="panel-body table-wrap">
+            <table class="data-table"><thead><tr><th>Date</th><th>Material</th><th>Qty</th><th>Price</th><th>Total</th><th>Paid from</th><th>By</th><th></th></tr></thead>
+            <tbody id="histRows"></tbody></table>
+          </div>
+        </div>
+      </section>
+
+      <section class="v3-panel" id="panel-profit">
+        <div class="v3-toolbar"><div class="grp"><select id="pPeriod"><option value="daily">Today</option><option value="weekly">This week</option><option value="monthly" selected>This month</option><option value="yearly">This year</option></select></div></div>
+        <div class="v3-stats" id="profitStats"></div>
+        <p class="v3-muted">Service profit = service sales actually collected − materials bought in the period. Credit that is still unpaid is not counted as income yet.</p>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="editModal"><div class="modal">
+  <div class="modal-head"><h3>Edit purchase</h3><button class="modal-close" onclick="adminCloseModal('editModal')">&times;</button></div>
+  <div class="modal-body">
+    <input type="hidden" id="editId">
+    <div class="field-row"><div class="field"><label>Quantity</label><input type="number" id="editQty" min="1"></div><div class="field"><label>Buying price (each)</label><input type="number" id="editPrice" min="1"></div></div>
+    <div class="field-row"><div class="field"><label>Date</label><input type="date" id="editDate"></div><div class="field"><label>Paid from</label><select id="editPaid"><option value="cash">Cash</option><option value="online">Mobile money</option><option value="other">Other</option></select></div></div>
+    <div class="field"><label>Note</label><input type="text" id="editNote" maxlength="255"></div>
+    <div id="editAlert"></div><button class="btn btn-primary" id="editSave">Save changes</button>
+  </div>
+</div></div>
+
+<div class="modal-backdrop" id="wasteModal"><div class="modal">
+  <div class="modal-head"><h3>Write off material</h3><button class="modal-close" onclick="adminCloseModal('wasteModal')">&times;</button></div>
+  <div class="modal-body">
+    <p id="wasteLabel" style="font-weight:600;margin-top:0;"></p><input type="hidden" id="wasteId">
+    <div class="field-row"><div class="field"><label>Quantity lost</label><input type="number" id="wasteQty" min="1"></div>
+      <div class="field"><label>Reason</label><select id="wasteReason"><option value="damaged">Damaged</option><option value="expired">Expired</option><option value="other">Other</option></select></div></div>
+    <div class="field"><label>Note</label><input type="text" id="wasteNote" maxlength="255" placeholder="e.g. paper wet from the rain"></div>
+    <div id="wasteAlert"></div><button class="btn btn-danger" id="wasteSave">Write off</button>
+  </div>
+</div></div>
+
+<script src="admin-core.js"></script>
+<script src="admin-service-purchases.js"></script>
+</body>
+</html>

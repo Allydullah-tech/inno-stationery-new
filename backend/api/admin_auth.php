@@ -46,6 +46,7 @@ switch (true) {
         $_SESSION['admin_username'] = $admin['username'];
         $_SESSION['admin_role'] = $admin['role'];
         session_regenerate_id(true);
+        log_activity($pdo, ['id' => $admin['id'], 'username' => $admin['username']], 'login', 'session', $admin['id'], $admin['full_name'] . ' signed in');
 
         json_response([
             'success' => true,

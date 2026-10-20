@@ -1,0 +1,35 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Activity Log — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+</head>
+<body class="admin-body">
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+      <div class="panel">
+        <div class="panel-head">
+          <h3>Who did what</h3>
+          <div class="filter-row">
+            <input type="date" id="lFrom"><input type="date" id="lTo">
+            <select id="lEntity" style="padding:9px 11px;border:1.5px solid var(--line-soft);border-radius:10px;background:#fff;"><option value="">Everything</option></select>
+            <select id="lAction" style="padding:9px 11px;border:1.5px solid var(--line-soft);border-radius:10px;background:#fff;"><option value="">All actions</option><option value="create">Created</option><option value="update">Changed</option><option value="delete">Deleted</option><option value="login">Sign-ins</option></select>
+            <input type="text" id="lQ" placeholder="Search…" style="padding:9px 11px;border:1.5px solid var(--line-soft);border-radius:10px;">
+            <button class="btn btn-outline btn-sm" id="lGo">Filter</button>
+          </div>
+        </div>
+        <div class="panel-body" style="padding:18px 22px;"><div class="v3-timeline" id="logList"><div class="v3-muted">Loading…</div></div></div>
+      </div>
+    </div>
+  </div>
+</div>
+<script src="admin-core.js"></script>
+<script src="admin-audit-log.js"></script>
+</body>
+</html>

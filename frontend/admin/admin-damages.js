@@ -9,7 +9,7 @@ let selectedProduct = null;
     currentAdmin = admin;
     renderAdminShell('damages', 'Damages', admin);
 
-    document.getElementById('dmgDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('dmgDate').value = adminToday();
 
     await loadProductsForSearch();
     loadDamages();
@@ -112,7 +112,7 @@ async function recordDamage(e) {
 
     adminToast('Loss recorded.', 'success');
     document.getElementById('damageForm').reset();
-    document.getElementById('dmgDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('dmgDate').value = adminToday();
     document.getElementById('dmgStockHint').textContent = '';
     document.getElementById('dmgProductSearch').dataset.selectedId = '';
     selectedProduct = null;

@@ -5,6 +5,63 @@
 <title>Dashboard — INNO's Stationery Internal System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+<style>
+/* ======================= Dashboard-only styling & animation ======================= */
+
+/* ---- KPI cards ---- */
+.kpi-grid { display: grid; grid-template-columns: repeat(auto-fit, minmax(210px, 1fr)); gap: 16px; margin-bottom: 26px; }
+.kpi-grid > *:nth-child(1) { animation-delay: .10s; } .kpi-grid > *:nth-child(2) { animation-delay: .18s; }
+.kpi-grid > *:nth-child(3) { animation-delay: .26s; } .kpi-grid > *:nth-child(4) { animation-delay: .34s; }
+.kpi-grid > *:nth-child(5) { animation-delay: .42s; } .kpi-grid > *:nth-child(6) { animation-delay: .50s; }
+.kpi-grid { grid-template-columns: repeat(3, 1fr); }
+@media (max-width: 1000px) { .kpi-grid { grid-template-columns: repeat(2, 1fr); } }
+@media (max-width: 560px) { .kpi-grid { grid-template-columns: 1fr; } }
+.skeleton { min-height: 112px; }
+.kpi { position: relative; overflow: hidden; padding: 16px 18px 16px 20px; border-radius: 16px; }
+.kpi::before { content: ""; position: absolute; left: 0; top: 0; bottom: 0; width: 5px; background: var(--kpi, var(--emerald)); animation: barGrow .8s ease .4s backwards; transform-origin: top; }
+@keyframes barGrow { from { transform: scaleY(0); } to { transform: scaleY(1); } }
+.kpi::after { /* hover shine */
+    content: ""; position: absolute; top: 0; bottom: 0; width: 70px; left: -100px;
+    background: linear-gradient(100deg, transparent, rgba(255,255,255,.7), transparent); transform: skewX(-18deg); transition: left .7s ease;
+}
+.kpi:hover::after { left: 120%; }
+.kpi.k-green  { --kpi: var(--emerald); }
+.kpi.k-orange { --kpi: var(--navy); }
+.kpi.k-gold   { --kpi: var(--gold); }
+.kpi.k-red    { --kpi: var(--red); }
+.kpi .kpi-badge {
+    position: absolute; top: 14px; right: 14px; width: 38px; height: 38px; border-radius: 11px;
+    display: flex; align-items: center; justify-content: center; background: #1F5A41; color: var(--gold);
+    box-shadow: 0 6px 14px rgba(31,90,65,.3); transition: transform .3s ease;
+}
+.kpi.k-red .kpi-badge { background: linear-gradient(135deg, #D14343, #A82E2E); color: #fff; box-shadow: 0 6px 14px rgba(209,67,67,.35); }
+.kpi.k-orange .kpi-badge { background: linear-gradient(135deg, #E85D2C, #C94A1E); color: #fff; box-shadow: 0 6px 14px rgba(232,93,44,.35); }
+.kpi:hover .kpi-badge { transform: rotate(-10deg) scale(1.12); }
+.kpi .stat-label { padding-right: 46px; }
+.kpi .stat-value { font-size: 24px; margin: 6px 0 10px; color: var(--ink); }
+.kpi.k-green .stat-value { color: var(--emerald); }
+.kpi.k-orange .stat-value { color: var(--navy-deep); }
+.kpi.k-gold .stat-value { color: var(--gold-deep); }
+.kpi.k-red .stat-value { color: var(--red); }
+.trend { display: inline-flex; align-items: center; gap: 5px; font-size: 11px; font-weight: 700; padding: 3px 10px; border-radius: 999px; }
+.trend.good { background: var(--emerald-tint); color: var(--emerald); }
+.trend.bad  { background: var(--red-tint); color: var(--red); }
+.trend.flat { background: #F1EEE4; color: var(--ink-soft); }
+.trend .arr { display: inline-block; animation: arrowBob 1.6s ease-in-out infinite; }
+@keyframes arrowBob { 0%,100% { transform: translateY(0); } 50% { transform: translateY(-2px); } }
+.trend.down .arr { animation-name: arrowBobDown; }
+@keyframes arrowBobDown { 0%,100% { transform: translateY(0); } 50% { transform: translateY(2px); } }
+.kpi.k-red.has-loss { animation: popIn .55s cubic-bezier(.22,.8,.3,1) backwards, lossPulse 2.6s ease-in-out 1s infinite; }
+@keyframes lossPulse { 0%,100% { box-shadow: var(--shadow); } 50% { box-shadow: 0 0 0 5px rgba(209,67,67,.12), var(--shadow); } }
+
+/* ---- Panels grid ---- */
+.dash-panels { display: grid; grid-template-columns: repeat(auto-fit, minmax(320px, 1fr)); gap: 18px; }
+.dash-panels .panel { margin-bottom: 0; }
+.live-dot { width: 8px; height: 8px; border-radius: 50%; background: var(--emerald); display: inline-block; margin-right: 6px; animation: livePulse 1.6s ease-out infinite; }
+@keyframes livePulse { 0% { box-shadow: 0 0 0 0 rgba(47,125,92,.55); } 100% { box-shadow: 0 0 0 9px rgba(47,125,92,0); } }
+
+</style>
 </head>
 <body class="admin-body">
 
@@ -14,40 +71,51 @@
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-content">
 
-      <div class="panel" style="background:linear-gradient(135deg, var(--emerald), #1F5A41); border:none; color:#fff;">
-        <div class="panel-body pad">
-          <div style="display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:10px;">
-            <h3 style="color:#fff;font-size:14px;margin:0;">Today's Summary — <span id="todayDateLabel"></span></h3>
-            <a href="reports.html" class="btn btn-sm" style="background:rgba(255,255,255,.18);color:#fff;box-shadow:none;">Full Reports →</a>
-          </div>
-          <div class="stat-grid" style="margin:14px 0 0;">
-            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
-              <div class="stat-label" style="color:rgba(255,255,255,.75);">Total Sales</div>
-              <div class="stat-value" style="color:#fff;" id="sumSales">—</div>
-            </div>
-            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
-              <div class="stat-label" style="color:rgba(255,255,255,.75);">Items Sold</div>
-              <div class="stat-value" style="color:#fff;" id="sumItems">—</div>
-            </div>
-            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
-              <div class="stat-label" style="color:rgba(255,255,255,.75);">Total Expenses</div>
-              <div class="stat-value" style="color:#fff;" id="sumExpenses">—</div>
-            </div>
-            <div class="stat-card" style="background:rgba(255,255,255,.12);border:none;box-shadow:none;">
-              <div class="stat-label" style="color:rgba(255,255,255,.75);">Net Profit (Today)</div>
-              <div class="stat-value" style="color:var(--gold);" id="sumNetProfit">—</div>
-            </div>
-          </div>
+      <!-- ===== Hero ===== -->
+      <section class="dash-hero">
+        <div class="hero-float" id="heroFloat" aria-hidden="true">
+          <!-- floating stationery icons -->
+          <svg style="top:14%;right:34%;width:46px;height:46px;animation-delay:-1s" viewBox="0 0 24 24"><path d="M3 21l1.5-5.5L16 4l4 4L8.5 19.5 3 21z"/><line x1="14" y1="6" x2="18" y2="10"/></svg>
+          <svg style="bottom:10%;right:46%;width:40px;height:40px;animation-delay:-3s" viewBox="0 0 24 24"><path d="M6 2h12v20H6z"/><line x1="10" y1="7" x2="15" y2="7"/><line x1="10" y1="11" x2="15" y2="11"/><line x1="3" y1="6" x2="6" y2="6"/><line x1="3" y1="12" x2="6" y2="12"/><line x1="3" y1="18" x2="6" y2="18"/></svg>
+          <svg style="top:52%;left:46%;width:36px;height:36px;animation-delay:-5s" viewBox="0 0 24 24"><path d="M8 7l8.5 8.5a3.5 3.5 0 0 1-5 5L4 12a5.5 5.5 0 0 1 8-8l6 6"/></svg>
+          <svg style="top:8%;left:52%;width:34px;height:34px;animation-delay:-2s" viewBox="0 0 24 24"><rect x="2" y="9" width="20" height="6" rx="1"/><line x1="6" y1="9" x2="6" y2="12"/><line x1="10" y1="9" x2="10" y2="13"/><line x1="14" y1="9" x2="14" y2="12"/><line x1="18" y1="9" x2="18" y2="13"/></svg>
         </div>
+        <div class="hero-left">
+          <div class="hero-eyebrow"><span id="heroGreeting"></span> · welcome back</div>
+          <div class="hero-name" id="heroName">—</div>
+          <p class="hero-sub">Here is how the shop is doing today.</p>
+          <div class="hero-actions" id="heroActions"></div>
+        </div>
+        <div class="hero-date">
+          <div class="hd-day" id="hdDay">—</div>
+          <div class="hd-num" id="hdNum">—</div>
+          <div class="hd-month" id="hdMonth">—</div>
+          <div class="hd-time"><span id="hdTime">--:--</span><small id="hdSec"></small></div>
+        </div>
+      </section>
+
+      <!-- ===== Today at a glance ===== -->
+      <div class="section-title">Today at a glance</div>
+      <div class="kpi-grid" id="todayGrid">
+        <div class="skeleton" style="height:112px;"></div>
+        <div class="skeleton" style="height:112px;"></div>
+        <div class="skeleton" style="height:112px;"></div>
+        <div class="skeleton" style="height:112px;"></div>
+        <div class="skeleton" style="height:112px;"></div>
+        <div class="skeleton" style="height:112px;"></div>
       </div>
 
-      <div class="stat-grid" id="stockStatGrid">
-        <div class="skeleton" style="height:80px;"></div>
-        <div class="skeleton" style="height:80px;"></div>
-        <div class="skeleton" style="height:80px;"></div>
+      <!-- ===== Stock summary ===== -->
+      <div class="section-title">Stock summary</div>
+      <div class="kpi-grid" id="stockStatGrid">
+        <div class="skeleton" style="height:112px;"></div>
+        <div class="skeleton" style="height:112px;"></div>
+        <div class="skeleton" style="height:112px;"></div>
       </div>
 
-      <div style="display:grid;grid-template-columns:1fr 1fr;gap:16px;" id="dashGridWrap">
+      <!-- ===== Activity ===== -->
+      <div class="section-title">Latest activity</div>
+      <div class="dash-panels">
         <div class="panel">
           <div class="panel-head"><h3>Low stock items</h3><a href="stock.html?low_stock=1" class="btn btn-ghost btn-sm">View all →</a></div>
           <div class="panel-body table-wrap">
@@ -58,10 +126,19 @@
           </div>
         </div>
         <div class="panel">
-          <div class="panel-head"><h3>Recent sales</h3><a href="sales.html" class="btn btn-ghost btn-sm">View all →</a></div>
+          <div class="panel-head"><h3><span class="live-dot"></span>Recent sales</h3><a href="sales.html" class="btn btn-ghost btn-sm">View all →</a></div>
           <div class="panel-body table-wrap">
             <table class="data-table" id="recentSalesTable">
               <thead><tr><th>Product</th><th>Qty</th><th>Total</th></tr></thead>
+              <tbody></tbody>
+            </table>
+          </div>
+        </div>
+        <div class="panel">
+          <div class="panel-head"><h3>Recent expenses</h3><a href="expenses.html" class="btn btn-ghost btn-sm">View all →</a></div>
+          <div class="panel-body table-wrap">
+            <table class="data-table" id="recentExpensesTable">
+              <thead><tr><th>Description</th><th>Amount</th></tr></thead>
               <tbody></tbody>
             </table>
           </div>
@@ -77,41 +154,118 @@
 (async () => {
     const admin = await guardAdminPage();
     if (!admin) return;
-    renderAdminShell('dashboard', 'Dashboard', admin);
 
-    document.getElementById('todayDateLabel').textContent = new Date().toLocaleDateString(undefined, { weekday: 'long', year: 'numeric', month: 'long', day: 'numeric' });
+    const fullDate = new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' });
+    renderAdminShell('dashboard', 'Dashboard', admin, { logoutButton: true, topbarTools: true, subtitle: 'Today — ' + fullDate });
 
+    /* ---------- Hero: greeting, name, quick actions, live clock ---------- */
+    const firstName = (admin.full_name || 'there').trim().split(/\s+/)[0];
+    document.getElementById('heroName').textContent = firstName;
+
+    const isWorker = admin.role === 'worker';
+    const actions = [
+        { href: 'sales.html', icon: 'cart', label: 'Record a Sale', primary: true },
+        !isWorker && { href: 'purchases.html', icon: 'truck', label: 'New Purchase' },
+        { href: 'expenses.html', icon: 'wallet', label: 'Add Expense' },
+    ].filter(Boolean);
+    document.getElementById('heroActions').innerHTML = actions.map(a =>
+        `<a href="${a.href}" class="hero-btn ${a.primary ? 'primary' : ''}">${adminIcon(a.icon, 15)} ${a.label}</a>`).join('');
+
+    function tickClock() {
+        const d = new Date(), h = d.getHours();
+        document.getElementById('heroGreeting').textContent = h < 12 ? 'Good morning' : h < 17 ? 'Good afternoon' : 'Good evening';
+        document.getElementById('hdDay').textContent = d.toLocaleDateString('en-GB', { weekday: 'long' });
+        document.getElementById('hdNum').textContent = d.getDate();
+        document.getElementById('hdMonth').textContent = d.toLocaleDateString('en-GB', { month: 'long', year: 'numeric' });
+        document.getElementById('hdTime').textContent = String(h).padStart(2, '0') + ':' + String(d.getMinutes()).padStart(2, '0');
+        document.getElementById('hdSec').textContent = String(d.getSeconds()).padStart(2, '0');
+    }
+    tickClock(); setInterval(tickClock, 1000);
+
+    // Rising gold dots inside the hero
+    const floatBox = document.getElementById('heroFloat');
+    for (let i = 0; i < 16; i++) {
+        const dot = document.createElement('span');
+        const size = 4 + Math.random() * 8;
+        dot.className = 'dot';
+        dot.style.cssText = `left:${Math.random() * 100}%;width:${size}px;height:${size}px;animation-duration:${6 + Math.random() * 7}s;animation-delay:${-Math.random() * 10}s;`;
+        floatBox.appendChild(dot);
+    }
+
+    /* ---------- Data ---------- */
     const res = await adminApi('/dashboard.php');
     if (!res.success) { adminToast(res.message || 'Could not load dashboard.', 'error'); return; }
 
-    document.getElementById('sumSales').textContent = adminFormatMoney(res.today.total_sales);
-    document.getElementById('sumItems').textContent = res.today.total_items_sold;
-    document.getElementById('sumExpenses').textContent = adminFormatMoney(res.today.total_expenses);
-    document.getElementById('sumNetProfit').textContent = adminFormatMoney(res.today.net_profit);
+    /** "Higher / Lower / Same as yesterday" pill. goodWhenUp=false for costs (expenses, damage). */
+    function trendPill(today, yesterday, goodWhenUp) {
+        if (yesterday === undefined || yesterday === null) return '';
+        const t = Number(today) || 0, y = Number(yesterday) || 0;
+        if (t === y) return `<span class="trend flat">● Same as yesterday</span>`;
+        const up = t > y;
+        const good = up === goodWhenUp;
+        return `<span class="trend ${good ? 'good' : 'bad'} ${up ? 'up' : 'down'}"><span class="arr">${up ? '▲' : '▼'}</span> ${up ? 'Higher' : 'Lower'} than yesterday</span>`;
+    }
 
-    document.getElementById('stockStatGrid').innerHTML = `
-      <div class="stat-card accent">
-        <div class="stat-label">Total Products</div>
-        <div class="stat-value">${res.stock.total_products}</div>
-      </div>
-      <div class="stat-card ${res.stock.low_stock_count > 0 ? 'warn' : ''}">
-        <div class="stat-label">Low Stock</div>
-        <div class="stat-value">${res.stock.low_stock_count}</div>
-        <div class="stat-sub">at or below threshold</div>
-      </div>
-      <div class="stat-card ${res.stock.out_of_stock_count > 0 ? 'danger' : ''}">
-        <div class="stat-label">Out of Stock</div>
-        <div class="stat-value">${res.stock.out_of_stock_count}</div>
-      </div>
-    `;
+
+    /* ---------- Notifications (cash audit, debts, change, restrictions, materials) -> top-bar bell ---------- */
+    (function renderAttention() {
+        const items = [];
+        const ca = res.cash_audit || {};
+        if (ca.done_today) {
+            const v = Number(ca.today_variance || 0);
+            items.push({ cls: Math.abs(v) < 0.5 ? 'ok' : 'bad', icon: 'calculator', href: 'cash-audit.html',
+                text: Math.abs(v) < 0.5 ? 'Today’s cash audit is saved and <b>balanced</b>.' : `Today’s cash audit is ${v < 0 ? '<b>short</b>' : '<b>over</b>'} by <b>${adminFormatMoney(Math.abs(v))}</b>.` });
+        } else items.push({ cls: 'warn', icon: 'calculator', href: 'cash-audit.html', text: 'Today’s <b>cash audit</b> has not been done yet.' });
+        const d = res.debts || {};
+        if (d.overdue_count > 0) items.push({ cls: 'bad', icon: 'credit-card', href: 'debts.html', text: `<b>${d.overdue_count}</b> overdue debt(s) worth <b>${adminFormatMoney(d.overdue_amount)}</b>.` });
+        if (d.due_soon_count > 0) items.push({ cls: 'warn', icon: 'credit-card', href: 'debts.html', text: `<b>${d.due_soon_count}</b> debt(s) fall due in the next 3 days.` });
+        if (res.change_owed > 0) items.push({ cls: 'warn', icon: 'wallet', href: 'customers.html', text: `We hold <b>${adminFormatMoney(res.change_owed)}</b> of change for customers.` });
+        if (res.restricted_customers > 0) items.push({ cls: 'bad', icon: 'shield', href: 'customers.html', text: `<b>${res.restricted_customers}</b> customer(s) blocked from credit.` });
+        (res.service_low_stock || []).slice(0, 2).forEach(m => items.push({ cls: 'warn', icon: 'layers', href: 'service-purchases.html', text: `Service material <b>${adminEscapeHtml(m.name + (m.description ? ' — ' + m.description : ''))}</b>: ${m.stock_quantity} left.` }));
+        adminSetNotifications(items);   // shown in the bell next to the theme + logout buttons
+    })();
+
+    const T = res.today, Y = res.yesterday || {};
+    const todayCards = [
+        { color: 'k-green',  icon: 'cart',        label: 'Sales',        value: adminFormatMoney(T.total_sales),       trend: trendPill(T.total_sales, Y.total_sales, true) },
+        { color: 'k-gold',   icon: 'file-text',   label: 'Transactions', value: T.sales_count ?? 0,                    trend: trendPill(T.sales_count ?? 0, Y.sales_count, true) },
+        { color: 'k-orange', icon: 'wallet',      label: 'Expenses',     value: adminFormatMoney(T.total_expenses),    trend: trendPill(T.total_expenses, Y.total_expenses, false) },
+        { color: 'k-red' + (Number(T.total_damage_loss) > 0 ? ' has-loss' : ''), icon: 'alert', label: 'Damage Loss', value: adminFormatMoney(T.total_damage_loss || 0), trend: trendPill(T.total_damage_loss || 0, Y.total_damage_loss, false) },
+        { color: 'k-green',  icon: 'trending-up', label: 'Net Profit',   value: adminFormatMoney(T.net_profit),        trend: trendPill(T.net_profit, Y.net_profit, true) },
+        { color: 'k-gold',   icon: 'package',     label: 'Items Sold',   value: T.total_items_sold,                    trend: trendPill(T.total_items_sold, Y.total_items_sold, true) },
+    ];
+    const cardHtml = c => `
+      <div class="stat-card kpi ${c.color}">
+        <div class="kpi-badge">${adminIcon(c.icon, 18)}</div>
+        <div class="stat-label">${c.label}</div>
+        <div class="stat-value">${c.value}</div>
+        ${c.trend || ''}
+      </div>`;
+    document.getElementById('todayGrid').innerHTML = todayCards.map(cardHtml).join('');
+
+    const S = res.stock;
+    document.getElementById('stockStatGrid').innerHTML = [
+        { color: 'k-green',  icon: 'layers',  label: 'Total Products', value: S.total_products, trend: `<span class="trend flat">Active products in catalogue</span>` },
+        { color: S.low_stock_count > 0 ? 'k-gold' : 'k-green', icon: 'alert', label: 'Low Stock', value: S.low_stock_count,
+          trend: `<span class="trend ${S.low_stock_count > 0 ? 'bad' : 'good'}">${S.low_stock_count > 0 ? 'At or below threshold' : 'All well stocked'}</span>` },
+        { color: S.out_of_stock_count > 0 ? 'k-red' : 'k-green', icon: 'package', label: 'Out of Stock', value: S.out_of_stock_count,
+          trend: `<span class="trend ${S.out_of_stock_count > 0 ? 'bad' : 'good'}">${S.out_of_stock_count > 0 ? 'Needs restocking' : 'Nothing out of stock'}</span>` },
+    ].map(cardHtml).join('');
+
+    const empty = (cols, msg) => `<tr><td colspan="${cols}" style="text-align:center;color:var(--ink-soft);padding:20px;">${msg}</td></tr>`;
 
     document.querySelector('#lowStockTable tbody').innerHTML = res.stock.low_stock_list.length
       ? res.stock.low_stock_list.map(p => `<tr><td>${adminEscapeHtml(p.name)}</td><td>${p.stock}</td><td>${p.low_stock_threshold}</td></tr>`).join('')
-      : `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);padding:20px;">No low-stock items right now.</td></tr>`;
+      : empty(3, 'No low-stock items right now.');
 
     document.querySelector('#recentSalesTable tbody').innerHTML = res.recent_sales.length
       ? res.recent_sales.map(s => `<tr><td>${adminEscapeHtml(s.product_name)}</td><td>${s.quantity}</td><td>${adminFormatMoney(s.total_amount)}</td></tr>`).join('')
-      : `<tr><td colspan="3" style="text-align:center;color:var(--ink-soft);padding:20px;">No sales recorded yet.</td></tr>`;
+      : empty(3, 'No sales recorded yet.');
+
+    const exp = res.recent_expenses || [];
+    document.querySelector('#recentExpensesTable tbody').innerHTML = exp.length
+      ? exp.map(e => `<tr><td>${adminEscapeHtml(e.description)}</td><td>${adminFormatMoney(e.amount)}</td></tr>`).join('')
+      : empty(2, 'No expenses recorded yet.');
 })();
 </script>
 </body>

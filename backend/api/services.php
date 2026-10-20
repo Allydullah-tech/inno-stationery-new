@@ -1,9 +1,15 @@
 <?php
 /**
  * Services catalogue (non-stock offerings: printing, binding, design work,
- * lamination, etc.). Selling price here is the *default* price — the
- * actual sale can charge a different (discounted/negotiated) price,
- * recorded on the sale itself without altering this default.
+ * lamination, etc.). A service has a category and one or more "types"
+ * (e.g. Printing -> B/W A4, Colour A4), each with its own default selling
+ * price. Every type is a row in `services`; rows of the same service share
+ * a `group_id`. The default price can be overridden on the sale itself.
+ *
+ *  GET                -> flat list of types; `name` is the display name.
+ *  GET ?grouped=1     -> services with their `types` array (Services page).
+ *  POST / PUT (JSON)  -> create / update a service and sync its types.
+ *  DELETE ?group_id=  -> delete a service with all its types.
  */
 
 require_once __DIR__ . '/../config/config.php';
@@ -16,11 +22,52 @@ $pdo = get_db();
 
 function service_row_out(array $row): array
 {
+    $row['base_name'] = $row['name'];
+    $row['variant'] = $row['variant'] ?? '';
+    $row['name'] = item_display_name($row['name'], $row['variant']);
     $row['selling_price'] = (float) $row['selling_price'];
-    // Keep the unknown/zero distinction: null stays null, never coerced to 0.
-    $row['buying_cost'] = $row['buying_cost'] !== null ? (float) $row['buying_cost'] : null;
-    $row['profit'] = $row['buying_cost'] !== null ? round($row['selling_price'] - $row['buying_cost'], 2) : null;
+    $row['minimum_price'] = isset($row['minimum_price']) && $row['minimum_price'] !== null ? (float) $row['minimum_price'] : null;
     return $row;
+}
+
+function read_service_payload(array $data): array
+{
+    $name = trim($data['name'] ?? '');
+    if ($name === '') {
+        json_response(['success' => false, 'message' => 'Service name is required.'], 400);
+    }
+    $typesIn = is_array($data['types'] ?? null) ? $data['types'] : [];
+    if (!$typesIn) {
+        json_response(['success' => false, 'message' => 'Add at least one type (use a blank type name if the service has only one).'], 400);
+    }
+
+    $types = [];
+    $seen = [];
+    foreach ($typesIn as $t) {
+        $variant = trim($t['variant'] ?? '');
+        $min = isset($t['minimum_price']) && $t['minimum_price'] !== '' ? (float) $t['minimum_price'] : null;
+        $price = isset($t['selling_price']) && $t['selling_price'] !== '' ? (float) $t['selling_price'] : -1;
+        if ($price < 0) {
+            json_response(['success' => false, 'message' => 'Every type needs a valid selling price.'], 400);
+        }
+        $key = mb_strtolower($variant);
+        if (isset($seen[$key])) {
+            json_response(['success' => false, 'message' => 'Each type name must be different.'], 400);
+        }
+        $seen[$key] = true;
+        if ($min !== null && ($min < 0 || ($price >= 0 && $min > $price))) {
+            json_response(['success' => false, 'message' => 'The minimum price cannot be negative or above the selling price.'], 400);
+        }
+        $types[] = ['id' => (int) ($t['id'] ?? 0), 'variant' => $variant, 'selling_price' => $price, 'minimum_price' => $min];
+    }
+
+    return [
+        'name' => $name,
+        'description' => trim($data['description'] ?? ''),
+        'category_id' => !empty($data['category_id']) ? (int) $data['category_id'] : null,
+        'status' => ($data['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active',
+        'types' => $types,
+    ];
 }
 
 switch (true) {
@@ -30,7 +77,8 @@ switch (true) {
         require_admin_auth();
 
         if (!empty($_GET['id'])) {
-            $stmt = $pdo->prepare('SELECT * FROM services WHERE id = ? LIMIT 1');
+            $stmt = $pdo->prepare('SELECT s.*, c.name AS category_name FROM services s
+                                    LEFT JOIN categories c ON c.id = s.category_id WHERE s.id = ? LIMIT 1');
             $stmt->execute([(int) $_GET['id']]);
             $row = $stmt->fetch();
             if (!$row) {
@@ -42,125 +90,141 @@ switch (true) {
         $where = [];
         $params = [];
         if (!empty($_GET['status'])) {
-            $where[] = 'status = ?';
+            $where[] = 's.status = ?';
             $params[] = $_GET['status'];
         }
+        if (!empty($_GET['category'])) {
+            $where[] = 'c.slug = ?';
+            $params[] = $_GET['category'];
+        }
         if (!empty($_GET['search'])) {
-            $where[] = '(name LIKE ? OR description LIKE ? OR code LIKE ?)';
+            $where[] = '(s.name LIKE ? OR s.variant LIKE ? OR s.description LIKE ?)';
             $like = '%' . $_GET['search'] . '%';
             $params[] = $like;
             $params[] = $like;
             $params[] = $like;
         }
 
-        $sql = 'SELECT * FROM services';
+        $sql = 'SELECT s.*, c.name AS category_name FROM services s LEFT JOIN categories c ON c.id = s.category_id';
         if ($where) {
             $sql .= ' WHERE ' . implode(' AND ', $where);
         }
-        $sql .= ' ORDER BY name ASC';
+        $sql .= ' ORDER BY s.name ASC, s.variant ASC';
 
         $stmt = $pdo->prepare($sql);
         $stmt->execute($params);
         $rows = array_map('service_row_out', $stmt->fetchAll());
 
-        $summary = [
-            'total_services' => count($rows),
-            'active_services' => count(array_filter($rows, fn($r) => $r['status'] === 'active')),
-        ];
+        if (!empty($_GET['grouped'])) {
+            $groups = [];
+            foreach ($rows as $r) {
+                $gid = (int) $r['group_id'];
+                if (!isset($groups[$gid])) {
+                    $groups[$gid] = [
+                        'group_id' => $gid,
+                        'name' => $r['base_name'],
+                        'description' => $r['description'],
+                        'category_id' => $r['category_id'],
+                        'category_name' => $r['category_name'],
+                        'status' => $r['status'],
+                        'types' => [],
+                    ];
+                }
+                $groups[$gid]['types'][] = $r;
+            }
+            $groups = array_values($groups);
+            $summary = [
+                'total_services' => count($groups),
+                'active_services' => count(array_filter($groups, fn($g) => $g['status'] === 'active')),
+            ];
+            json_response(['success' => true, 'groups' => $groups, 'summary' => $summary]);
+        }
 
-        json_response(['success' => true, 'services' => $rows, 'summary' => $summary]);
+        json_response(['success' => true, 'services' => $rows]);
         break;
 
-    // Add a new service (admins/super admins only)
+    // Add a new service with its types (admins/super admins only)
     case $method === 'POST':
-        require_non_worker();
-        $body = read_json_body();
+        $admin = require_non_worker();
+        $p = read_service_payload(read_json_body());
 
-        $name = trim($body['name'] ?? '');
-        $code = trim($body['code'] ?? '');
-        $description = trim($body['description'] ?? '');
-        $sellingPrice = isset($body['selling_price']) ? (float) $body['selling_price'] : -1;
-        $buyingCost = isset($body['buying_cost']) && $body['buying_cost'] !== '' && $body['buying_cost'] !== null
-            ? (float) $body['buying_cost'] : null;
-        $status = ($body['status'] ?? 'active') === 'inactive' ? 'inactive' : 'active';
-
-        if ($name === '' || $sellingPrice < 0) {
-            json_response(['success' => false, 'message' => 'Service name and a valid selling price are required.'], 400);
-        }
-        if ($buyingCost !== null && $buyingCost < 0) {
-            json_response(['success' => false, 'message' => 'Buying cost cannot be negative.'], 400);
-        }
-
+        $pdo->beginTransaction();
         try {
-            $stmt = $pdo->prepare('INSERT INTO services (name, code, description, buying_cost, selling_price, status) VALUES (?, ?, ?, ?, ?, ?)');
-            $stmt->execute([$name, $code ?: null, $description ?: null, $buyingCost, $sellingPrice, $status]);
-        } catch (PDOException $e) {
-            if ($e->getCode() === '23000') {
-                json_response(['success' => false, 'message' => 'That service code is already in use.'], 400);
+            $groupId = null;
+            $ins = $pdo->prepare('INSERT INTO services (category_id, name, variant, description, selling_price, status, group_id, minimum_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            foreach ($p['types'] as $t) {
+                $ins->execute([$p['category_id'], $p['name'], $t['variant'], $p['description'] ?: null, $t['selling_price'], $p['status'], $groupId, $t['minimum_price']]);
+                if ($groupId === null) {
+                    $groupId = (int) $pdo->lastInsertId();
+                    $pdo->prepare('UPDATE services SET group_id = id WHERE id = ?')->execute([$groupId]);
+                }
             }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
             json_response(['success' => false, 'message' => 'Could not save service.'], 500);
         }
 
-        json_response(['success' => true, 'message' => 'Service added.', 'id' => $pdo->lastInsertId()], 201);
+        log_activity($pdo, $admin, 'create', 'service', $groupId, 'Service "' . $p['name'] . '" added with ' . count($p['types']) . ' type(s)');
+        json_response(['success' => true, 'message' => 'Service added.', 'group_id' => $groupId], 201);
         break;
 
-    // Update a service (admins/super admins only)
+    // Update a service and sync its types (admins/super admins only)
     case $method === 'PUT':
-        require_non_worker();
+        $admin = require_non_worker();
         $data = read_json_body();
-
-        $id = (int) ($data['id'] ?? 0);
-        if (!$id) {
+        $groupId = (int) ($data['group_id'] ?? 0);
+        if (!$groupId) {
             json_response(['success' => false, 'message' => 'Missing service id.'], 400);
         }
+        $p = read_service_payload($data);
 
-        if (isset($data['selling_price']) && (float) $data['selling_price'] < 0) {
-            json_response(['success' => false, 'message' => 'Selling price cannot be negative.'], 400);
-        }
-        if (isset($data['buying_cost']) && $data['buying_cost'] !== '' && $data['buying_cost'] !== null && (float) $data['buying_cost'] < 0) {
-            json_response(['success' => false, 'message' => 'Buying cost cannot be negative.'], 400);
-        }
-
-        $fields = [];
-        $params = [];
-        foreach (['name', 'code', 'description', 'selling_price', 'status'] as $field) {
-            if (isset($data[$field]) && $data[$field] !== '') {
-                $fields[] = "$field = ?";
-                $params[] = $data[$field];
-            }
-        }
-        // buying_cost is special: an explicit null/'' clears it back to "unknown".
-        if (array_key_exists('buying_cost', $data)) {
-            $fields[] = 'buying_cost = ?';
-            $params[] = ($data['buying_cost'] === '' || $data['buying_cost'] === null) ? null : (float) $data['buying_cost'];
+        $existingStmt = $pdo->prepare('SELECT id FROM services WHERE group_id = ?');
+        $existingStmt->execute([$groupId]);
+        $existingIds = array_map('intval', $existingStmt->fetchAll(PDO::FETCH_COLUMN));
+        if (!$existingIds) {
+            json_response(['success' => false, 'message' => 'Service not found.'], 404);
         }
 
-        if (!$fields) {
-            json_response(['success' => false, 'message' => 'Nothing to update.'], 400);
-        }
-
-        $params[] = $id;
+        $pdo->beginTransaction();
         try {
-            $pdo->prepare('UPDATE services SET ' . implode(', ', $fields) . ' WHERE id = ?')->execute($params);
-        } catch (PDOException $e) {
-            if ($e->getCode() === '23000') {
-                json_response(['success' => false, 'message' => 'That service code is already in use.'], 400);
+            $keepIds = [];
+            $upd = $pdo->prepare('UPDATE services SET category_id = ?, name = ?, variant = ?, description = ?, selling_price = ?, status = ?, minimum_price = ? WHERE id = ? AND group_id = ?');
+            $ins = $pdo->prepare('INSERT INTO services (category_id, name, variant, description, selling_price, status, group_id, minimum_price) VALUES (?, ?, ?, ?, ?, ?, ?, ?)');
+            foreach ($p['types'] as $t) {
+                if ($t['id'] && in_array($t['id'], $existingIds, true)) {
+                    $upd->execute([$p['category_id'], $p['name'], $t['variant'], $p['description'] ?: null, $t['selling_price'], $p['status'], $t['minimum_price'], $t['id'], $groupId]);
+                    $keepIds[] = $t['id'];
+                } else {
+                    $ins->execute([$p['category_id'], $p['name'], $t['variant'], $p['description'] ?: null, $t['selling_price'], $p['status'], $groupId, $t['minimum_price']]);
+                    $keepIds[] = (int) $pdo->lastInsertId();
+                }
             }
+            $remove = array_diff($existingIds, $keepIds);
+            if ($remove) {
+                $in = implode(',', array_map('intval', $remove));
+                $pdo->exec("DELETE FROM services WHERE group_id = $groupId AND id IN ($in)");
+            }
+            $pdo->commit();
+        } catch (Throwable $e) {
+            $pdo->rollBack();
             json_response(['success' => false, 'message' => 'Could not update service.'], 500);
         }
 
+        log_activity($pdo, $admin, 'update', 'service', $groupId, 'Service "' . $p['name'] . '" edited (' . count($p['types']) . ' type(s))');
         json_response(['success' => true, 'message' => 'Service updated.']);
         break;
 
     // Delete a service (admins/super admins only). Past sales keep their
     // own copy of the name/price, so history is unaffected.
     case $method === 'DELETE':
-        require_non_worker();
-        $id = (int) ($_GET['id'] ?? 0);
-        if (!$id) {
+        $admin = require_non_worker();
+        $groupId = (int) ($_GET['group_id'] ?? 0);
+        if (!$groupId) {
             json_response(['success' => false, 'message' => 'Missing id.'], 400);
         }
-        $pdo->prepare('DELETE FROM services WHERE id = ?')->execute([$id]);
+        $pdo->prepare('DELETE FROM services WHERE group_id = ?')->execute([$groupId]);
+        log_activity($pdo, $admin, 'delete', 'service', $groupId, 'Service group #' . $groupId . ' deleted');
         json_response(['success' => true, 'message' => 'Service deleted.']);
         break;
 

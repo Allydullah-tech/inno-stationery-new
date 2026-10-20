@@ -19,7 +19,7 @@ switch ($method) {
 
     // Add a new admin OR worker (admins and super admins only)
     case 'POST':
-        require_non_worker();
+        $actor = require_non_worker();
         $body = read_json_body();
 
         $fullName = trim($body['full_name'] ?? '');
@@ -56,6 +56,7 @@ switch ($method) {
             $sq2, password_hash(strtolower($sa2), PASSWORD_DEFAULT),
         ]);
 
+        log_activity($pdo, $actor, 'create', 'account', $pdo->lastInsertId(), "New {$role} account created: {$username}");
         json_response(['success' => true, 'message' => ($role === 'worker' ? 'New worker' : 'New admin') . ' account created.'], 201);
         break;
 
@@ -76,6 +77,7 @@ switch ($method) {
         $stmt = $pdo->prepare('UPDATE admins SET is_active = ? WHERE id = ?');
         $stmt->execute([$isActive, $id]);
 
+        log_activity($pdo, $current, 'update', 'account', $id, 'Account ' . ($isActive ? 'activated' : 'deactivated'));
         json_response(['success' => true, 'message' => 'Account status updated.']);
         break;
 

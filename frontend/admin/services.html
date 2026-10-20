@@ -5,6 +5,14 @@
 <title>Services — INNO's Stationery Internal System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+<style>
+  .type-head, .type-row { display:grid; grid-template-columns: 1.5fr 1fr 1fr 32px; gap:6px; align-items:center; }
+  .type-head { font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
+  .type-row { margin-bottom:6px; }
+  .type-row input { width:100%; padding:8px 9px; border:1.5px solid var(--line-soft); border-radius:8px; min-width:0; }
+  .type-chip { display:inline-block; padding:2px 9px; margin:2px 4px 2px 0; border-radius:999px; background:var(--line-soft); font-size:12.5px; }
+</style>
 </head>
 <body class="admin-body">
 
@@ -27,6 +35,7 @@
               <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="20" y1="20" x2="15.5" y2="15.5"/></svg>
               <input type="text" id="serviceSearch" placeholder="Search services…" autocomplete="off">
             </div>
+            <select id="filterServiceCategory" class="status-select"><option value="">All categories</option></select>
             <select id="filterServiceStatus" class="status-select">
               <option value="">All statuses</option>
               <option value="active">Active</option>
@@ -37,9 +46,9 @@
         </div>
         <div class="panel-body table-wrap">
           <table class="data-table">
-            <thead><tr><th>Name</th><th>Code</th><th>Selling Price</th><th>Buying Cost</th><th>Status</th><th>Date Added</th><th></th></tr></thead>
+            <thead><tr><th>Service Name</th><th>Category</th><th>Types</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="servicesTbody">
-              <tr><td colspan="7" style="text-align:center;padding:30px;">Loading…</td></tr>
+              <tr><td colspan="5" style="text-align:center;padding:30px;">Loading…</td></tr>
             </tbody>
           </table>
         </div>
@@ -65,8 +74,8 @@
         </div>
         <div class="field-row">
           <div class="field">
-            <label for="sf_code">Service code / reference (optional)</label>
-            <input type="text" id="sf_code" placeholder="e.g. SVC-PRINT">
+            <label for="sf_category">Category</label>
+            <select id="sf_category"><option value="">— none —</option></select>
           </div>
           <div class="field">
             <label for="sf_status">Status</label>
@@ -80,16 +89,12 @@
           <label for="sf_description">Description</label>
           <textarea id="sf_description" placeholder="What this service covers…"></textarea>
         </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="sf_selling_price">Selling price (TSh) *</label>
-            <input type="number" id="sf_selling_price" min="0" step="1" required>
-          </div>
-          <div class="field">
-            <label for="sf_buying_cost">Buying cost (optional)</label>
-            <input type="number" id="sf_buying_cost" min="0" step="1" placeholder="Leave blank if unknown">
-            <div class="hint">Leave blank if this service has no measurable acquisition cost — reports will show it as "not provided" rather than assuming zero.</div>
-          </div>
+        <div class="field">
+          <label>Types *</label>
+          <div class="hint" style="margin:0 0 8px;">e.g. B/W or Colour. If the service has only one kind, leave the type name blank.</div>
+          <div class="type-head"><span>Type name</span><span>Selling price (TSh)</span><span title="Lowest price a cashier may charge">Min price</span><span></span></div>
+          <div id="sf_types"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="addServiceTypeBtn" style="margin-top:8px;">+ Add type</button>
         </div>
         <div id="serviceFormAlert"></div>
         <button type="submit" class="btn btn-primary btn-block" id="serviceSaveBtn">Save Service</button>

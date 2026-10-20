@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Receipt — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+</head>
+<body class="admin-body">
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+      <div class="v3-receipt-actions">
+        <button class="btn btn-primary" onclick="window.print()">Print receipt</button>
+        <a class="btn btn-outline" href="sales.html">Back to sales</a>
+      </div>
+      <div class="v3-receipt-wrap"><div class="v3-receipt" id="receiptBox"><div class="c">Loading…</div></div></div>
+    </div>
+  </div>
+</div>
+<script src="admin-core.js"></script>
+<script src="admin-receipt.js"></script>
+</body>
+</html>

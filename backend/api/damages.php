@@ -58,7 +58,7 @@ switch ($method) {
 
         $limit = (int) ($_GET['limit'] ?? 0);
         if ($limit > 0) {
-            $sql .= ' LIMIT ' . $limit;
+            $sql .= ' LIMIT ' . min($limit, 20000);
         }
 
         $stmt = $pdo->prepare($sql);
@@ -78,9 +78,13 @@ switch ($method) {
         $quantity = (int) ($body['quantity'] ?? 0);
         $reason = in_array($body['reason'] ?? '', ['expired', 'damaged', 'other'], true) ? $body['reason'] : 'damaged';
         $notes = trim($body['notes'] ?? '');
-        $damageDate = !empty($body['damage_date']) ? $body['damage_date'] : date('Y-m-d');
+        $damageDate = !empty($body['damage_date']) ? (string) $body['damage_date'] : today_str();
+        assert_date_allowed($admin, $damageDate);
+        if (mb_strlen($notes) > 255) {
+            json_response(['success' => false, 'message' => 'Notes are too long (255 characters max).'], 400);
+        }
 
-        if ($quantity <= 0) {
+        if ($quantity <= 0 || $quantity > 1000000) {
             json_response(['success' => false, 'message' => 'Please enter a valid quantity.'], 400);
         }
 
@@ -98,7 +102,7 @@ switch ($method) {
             if ($product['stock'] < $quantity) {
                 json_response(['success' => false, 'message' => 'Only ' . $product['stock'] . ' in stock — cannot mark more than that as damaged.'], 400);
             }
-            $itemName = $product['name'];
+            $itemName = item_display_name($product['name'], $product['variant'] ?? null);
             $category = null;
             $unitCost = (float) $product['buy_price'];
         } else {
@@ -126,21 +130,31 @@ switch ($method) {
                 $isStockItem ? 1 : 0, $productId, $itemName, $category ?: null, $quantity, $reason,
                 $unitCost, $lossAmount, $notes ?: null, $admin['id'], $damageDate,
             ]);
+            $newId = $pdo->lastInsertId();
             if ($isStockItem) {
+                $lock = $pdo->prepare('SELECT stock FROM products WHERE id = ? FOR UPDATE');
+                $lock->execute([$productId]);
+                if ((int) $lock->fetchColumn() < $quantity) {
+                    throw new RuntimeException('Not enough stock left to write off that quantity.');
+                }
                 $pdo->prepare('UPDATE products SET stock = stock - ? WHERE id = ?')->execute([$quantity, $productId]);
             }
             $pdo->commit();
+        } catch (RuntimeException $e) {
+            $pdo->rollBack();
+            json_response(['success' => false, 'message' => $e->getMessage()], 400);
         } catch (Throwable $e) {
             $pdo->rollBack();
             json_response(['success' => false, 'message' => 'Could not record damage. Please try again.'], 500);
         }
+        log_activity($pdo, $admin, 'create', 'damage', $newId, "{$quantity} × {$itemName} ({$reason}), loss " . number_format($lossAmount));
 
-        json_response(['success' => true, 'message' => 'Damage recorded.', 'id' => $pdo->lastInsertId()], 201);
+        json_response(['success' => true, 'message' => 'Damage recorded.', 'id' => $newId], 201);
         break;
 
     // Delete a damage record (admins/super admins only — restores stock only if it was a stock item)
     case 'DELETE':
-        require_non_worker();
+        $admin = require_non_worker();
         $id = (int) ($_GET['id'] ?? 0);
         if (!$id) {
             json_response(['success' => false, 'message' => 'Missing id.'], 400);
@@ -164,6 +178,7 @@ switch ($method) {
             json_response(['success' => false, 'message' => 'Could not delete record.'], 500);
         }
 
+        log_activity($pdo, $admin, 'delete', 'damage', $id, 'Damage record deleted: ' . $damage['quantity'] . ' × ' . $damage['product_name'] . ', loss ' . number_format((float) $damage['loss_amount']));
         json_response(['success' => true, 'message' => 'Damage record deleted' . ($damage['is_stock_item'] ? ' and stock restored' : '') . '.']);
         break;
 

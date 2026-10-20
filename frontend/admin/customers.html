@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Customers — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+</head>
+<body class="admin-body">
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="v3-stats" id="custStats"></div>
+
+      <div class="v3-tabs">
+        <button class="v3-tab active" data-tab="list">Customers</button>
+        <button class="v3-tab" data-tab="change">Change owed <span class="v3-chip warn" id="changeCount" style="padding:1px 8px;">0</span></button>
+      </div>
+
+      <section class="v3-panel active" id="panel-list">
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Customer list</h3>
+            <div class="filter-row">
+              <div class="search-input-wrap" style="min-width:210px;">
+                <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="20" y1="20" x2="15.5" y2="15.5"/></svg>
+                <input type="text" id="custSearch" placeholder="Search name or phone…" autocomplete="off">
+              </div>
+              <select id="custRisk" style="padding:9px 11px;border:1.5px solid var(--line-soft);border-radius:10px;background:#fff;">
+                <option value="">All customers</option><option value="good">Good standing</option><option value="owing">Owing</option><option value="late">Paying late</option><option value="restricted">Restricted</option>
+              </select>
+            </div>
+          </div>
+          <div class="panel-body table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Customer</th><th>Status</th><th>Credit taken</th><th>Repaid</th><th>Still owes</th><th>Overdue</th><th>Last credit</th><th></th></tr></thead>
+              <tbody id="custRows"><tr><td colspan="8" class="text-center" style="padding:30px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+      <section class="v3-panel" id="panel-change">
+        <div class="panel">
+          <div class="panel-head"><h3>Change customers left with the shop</h3><span class="v3-muted">Hand it back and record it here</span></div>
+          <div class="panel-body table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th>Customer</th><th>Receipt</th><th>Left</th><th>Still owed</th><th></th></tr></thead>
+              <tbody id="changeRows"></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="custModal"><div class="modal wide">
+  <div class="modal-head"><h3 id="custModalTitle">Customer</h3><button class="modal-close" onclick="adminCloseModal('custModal')">&times;</button></div>
+  <div class="modal-body" id="custModalBody"></div>
+</div></div>
+
+<script src="admin-core.js"></script>
+<script src="admin-customers.js"></script>
+</body>
+</html>

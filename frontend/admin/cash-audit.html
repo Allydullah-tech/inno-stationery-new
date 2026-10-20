@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Cash Audit — INNO's Stationery Internal System</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+</head>
+<body class="admin-body">
+<div class="admin-shell">
+  <div id="adminSidebarWrap"></div>
+  <div class="admin-main">
+    <div class="admin-topbar" id="adminTopbar"></div>
+    <div class="admin-content">
+
+      <div class="v3-toolbar">
+        <div class="grp">
+          <label for="auditDate" style="font-weight:600;font-size:13px;">Audit date</label>
+          <input type="date" id="auditDate">
+          <span id="auditStatusChip"></span>
+        </div>
+        <div class="v3-tabs" style="margin:0;">
+          <button class="v3-tab active" data-tab="count">Count &amp; Audit</button>
+          <button class="v3-tab" data-tab="float">Float &amp; Bank</button>
+          <button class="v3-tab" data-tab="history">History</button>
+        </div>
+      </div>
+
+      <!-- ============ COUNT ============ -->
+      <section class="v3-panel active" id="panel-count">
+        <div id="auditBanner"></div>
+        <div class="v3-grid-2">
+          <div>
+            <div class="panel">
+              <div class="panel-head"><h3>1 · Count the drawer</h3><span class="v3-muted">Enter how many of each note / coin</span></div>
+              <div class="panel-body" style="padding:16px;">
+                <div class="v3-denoms" id="denomGrid"></div>
+                <div style="display:flex;justify-content:space-between;align-items:center;margin-top:14px;padding-top:12px;border-top:2px solid var(--ink);">
+                  <b>Total counted cash</b><b class="v3-money" id="countedTotal" style="font-size:20px;">0</b>
+                </div>
+              </div>
+            </div>
+            <div class="panel" style="margin-top:16px;">
+              <div class="panel-head"><h3>2 · Mobile money balance</h3></div>
+              <div class="panel-body" style="padding:16px;">
+                <div class="field"><label for="countedOnline">Money now in M-PESA / Airtel / HaloPesa / Mixx (TSh)</label>
+                  <input type="number" id="countedOnline" min="0" value="0"></div>
+                <div class="field"><label for="auditNote">Note (optional)</label>
+                  <input type="text" id="auditNote" maxlength="255" placeholder="e.g. 2,000 note torn, to be replaced"></div>
+                <div id="auditAlert"></div>
+                <button class="btn btn-primary" id="saveAuditBtn">Save Cash Audit</button>
+                <button class="btn btn-outline v3-hidden" id="cancelEditBtn" style="margin-left:8px;">Cancel edit</button>
+              </div>
+            </div>
+          </div>
+
+          <div>
+            <div class="panel">
+              <div class="panel-head"><h3>What the system expects</h3><span class="v3-muted" id="figDate"></span></div>
+              <div class="panel-body" style="padding:6px 18px 16px;">
+                <div class="v3-calc" id="calcCash"></div>
+                <div class="v3-calc" id="calcOnline" style="margin-top:14px;"></div>
+                <div class="v3-calc" style="margin-top:14px;" id="calcInfo"></div>
+              </div>
+            </div>
+            <div id="resultBox"></div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ FLOAT & BANK ============ -->
+      <section class="v3-panel" id="panel-float">
+        <div class="v3-grid-2">
+          <div class="panel">
+            <div class="panel-head"><h3>Cash float for <span id="floatDateLbl"></span></h3></div>
+            <div class="panel-body" style="padding:16px;">
+              <div class="v3-stats" style="margin-bottom:14px;grid-template-columns:repeat(2,1fr);">
+                <div class="v3-stat green"><div class="lbl">Opening cash</div><div class="val" id="floatTotal">0</div><div class="sub" id="floatSource"></div></div>
+                <div class="v3-stat orange"><div class="lbl">Top-ups / taken out</div><div class="val" id="floatMoves">0</div><div class="sub">added − taken out today</div></div>
+              </div>
+              <form id="floatForm">
+                <div class="field-row">
+                  <div class="field"><label for="floatType">Action</label>
+                    <select id="floatType"><option value="add">Add cash to the till</option><option value="reduce">Take cash out of the till</option><option value="opening" class="admin-only">Set opening cash (admin)</option></select></div>
+                  <div class="field"><label for="floatAmount">Amount (TSh)</label><input type="number" id="floatAmount" min="0" required></div>
+                </div>
+                <div class="field"><label for="floatNote">Reason *</label><input type="text" id="floatNote" maxlength="255" placeholder="e.g. small change from the bank" required></div>
+                <div id="floatAlert"></div>
+                <button class="btn btn-primary btn-sm" type="submit">Save entry</button>
+              </form>
+              <div class="table-wrap" style="margin-top:14px;"><table class="data-table"><tbody id="floatEntries"></tbody></table></div>
+            </div>
+          </div>
+
+          <div class="panel">
+            <div class="panel-head"><h3>Bank deposits</h3><span class="v3-chip info" id="bankableChip"></span></div>
+            <div class="panel-body" style="padding:16px;">
+              <div id="depositLock" class="v3-banner warn v3-hidden">Save the cash audit for this date first — a deposit can only come out of counted cash.</div>
+              <form id="depositForm">
+                <div class="field-row">
+                  <div class="field"><label for="depAmount">Amount banked (TSh) *</label><input type="number" id="depAmount" min="1" required></div>
+                  <div class="field"><label for="depFile">Photo of the slip</label><input type="file" id="depFile" accept="image/*,application/pdf"></div>
+                </div>
+                <div class="field"><label for="depNote">Note</label><input type="text" id="depNote" maxlength="255"></div>
+                <div id="depAlert"></div>
+                <button class="btn btn-green btn-sm" type="submit" id="depBtn">Record deposit</button>
+              </form>
+              <div class="table-wrap" style="margin-top:14px;"><table class="data-table"><thead><tr><th>Date</th><th>Amount</th><th>Note</th><th></th></tr></thead><tbody id="depositRows"></tbody></table></div>
+            </div>
+          </div>
+        </div>
+      </section>
+
+      <!-- ============ HISTORY ============ -->
+      <section class="v3-panel" id="panel-history">
+        <div class="v3-stats" id="histStats"></div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Saved audits</h3>
+            <div class="filter-row">
+              <input type="date" id="histFrom"><input type="date" id="histTo">
+              <button class="btn btn-outline btn-sm" id="histFilter">Filter</button>
+              <a class="btn btn-outline btn-sm" id="histExport" href="#">Download CSV</a>
+            </div>
+          </div>
+          <div class="panel-body table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th>Expected cash</th><th>Counted cash</th><th>Mobile</th><th>Variance</th><th>Banked</th><th>By</th><th></th></tr></thead>
+              <tbody id="histRows"><tr><td colspan="8" class="text-center" style="padding:30px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
+        </div>
+      </section>
+
+    </div>
+  </div>
+</div>
+
+<div class="modal-backdrop" id="auditModal"><div class="modal wide">
+  <div class="modal-head"><h3 id="auditModalTitle">Audit</h3><button class="modal-close" onclick="adminCloseModal('auditModal')">&times;</button></div>
+  <div class="modal-body" id="auditModalBody"></div>
+</div></div>
+
+<script src="admin-core.js"></script>
+<script src="admin-cash-audit.js"></script>
+</body>
+</html>

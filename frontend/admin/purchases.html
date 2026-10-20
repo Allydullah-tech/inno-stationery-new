@@ -5,6 +5,15 @@
 <title>Purchases — INNO's Stationery Internal System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+<style>
+  .type-head, .type-row { display:grid; grid-template-columns: 1.5fr .8fr .7fr .9fr .9fr .9fr 32px; gap:6px; align-items:center; }
+  .type-head { font-size:11.5px; font-weight:600; color:var(--ink-soft); margin:8px 0 4px; }
+  .type-row { margin-bottom:4px; }
+  .type-row input { width:100%; padding:8px 9px; border:1.5px solid var(--line-soft); border-radius:8px; min-width:0; }
+  @media (max-width:620px){ .type-head{display:none;} .type-row{grid-template-columns:1fr 1fr;} }
+  #manualModeWrap .form-card, .form-card { max-width:none; }
+</style>
 </head>
 <body class="admin-body">
 
@@ -14,71 +23,21 @@
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-content">
 
-      <div class="form-card" style="margin-bottom:20px;max-width:760px;">
+      <div class="form-card" style="margin-bottom:20px;max-width:980px;">
         <h3 style="font-size:15px;margin-bottom:2px;">Add products to stock</h3>
         <p class="hint" style="margin-bottom:16px;">Every item added here increases stock immediately and updates its buying cost.</p>
 
-        <div class="radio-cards" style="margin-bottom:16px;">
-          <label class="radio-card active"><input type="radio" name="purchaseMode" value="csv" checked><span>📄 Import from CSV</span></label>
-          <label class="radio-card"><input type="radio" name="purchaseMode" value="manual"><span>✍️ Enter manually</span></label>
-        </div>
-
-        <!-- CSV import -->
-        <div id="csvModeWrap">
-          <!-- Step 1: choose file -->
-          <div id="csvUploadStep">
-            <p class="hint" style="margin-bottom:14px;">
-              Upload a CSV with a header row. The system recognizes common column-naming variations, so your own spreadsheet's headers usually work as-is:
-              <br>• Product name: <code>product_name</code>, <code>product</code>, <code>item</code>, or <code>name</code>
-              <br>• Quantity: <code>quantity</code>, <code>qty</code>, or <code>units</code>
-              <br>• Buy price (cost per unit): <code>buy_price</code>, <code>amount</code>, <code>unit_price</code>, or <code>cost</code>
-              <br>• Selling price (optional, only used for new products): <code>new_sell_price</code> or <code>selling_price</code>
-              <br>Buy price must be the cost per single unit — if your supplier quoted a price per dozen or box, divide it by how many units are inside first.
-              Matches products by exact name, or creates a new one if none exists.
-            </p>
-            <form id="importForm">
-              <div class="field">
-                <label for="impDate">Date received</label>
-                <input type="date" id="impDate">
-              </div>
-              <div class="field">
-                <label>CSV file *</label>
-                <div class="file-drop" id="fileDrop">
-                  <p style="margin:0;" id="fileDropLabel">Click to choose a .csv file, or drag it here</p>
-                  <input type="file" id="fileInput" accept=".csv" style="display:none;">
-                </div>
-              </div>
-              <div id="importAlert"></div>
-              <button type="submit" class="btn btn-primary" id="importBtn">Review Import</button>
-            </form>
-          </div>
-
-          <!-- Step 2: review & edit every parsed row before committing -->
-          <div id="csvReviewStep" style="display:none;">
-            <p class="hint" style="margin-bottom:12px;">
-              Check each row before adding it to stock. <strong>New products</strong> need a selling price filled in — existing products already show their current price.
-            </p>
-            <div id="csvReviewAlert"></div>
-            <div class="table-wrap" style="margin-bottom:14px;">
-              <table class="data-table" id="csvReviewTable">
-                <thead><tr><th>Product</th><th>Status</th><th>Quantity</th><th>Buy Price (TSh)</th><th>Selling Price (TSh)</th><th></th></tr></thead>
-                <tbody id="csvReviewTbody"></tbody>
-              </table>
-            </div>
-            <div style="display:flex;gap:10px;">
-              <button type="button" class="btn btn-outline" id="csvStartOverBtn">Start Over</button>
-              <button type="button" class="btn btn-primary" id="csvConfirmBtn" style="flex:1;">Confirm &amp; Add to Stock</button>
-            </div>
-          </div>
-        </div>
-
         <!-- Manual entry -->
-        <div id="manualModeWrap" style="display:none;">
-          <p class="hint" style="margin-bottom:14px;">Add each product you received, using the same Quantity and Buy price fields as the Stock page.</p>
+        <div id="manualModeWrap">
+          <p class="hint" style="margin-bottom:14px;">Add each product you received. A product can have several types (e.g. colours or sizes) — add one line per type. Picking an existing product lets you restock its types or add a new one. Set the unit (pcs, box, dozen…) and the lowest price a cashier may sell at.</p>
           <form id="manualForm">
             <div class="field">
               <label for="manDate">Date received</label>
               <input type="date" id="manDate">
+            </div>
+            <div class="field">
+              <label for="manPaid">Paid from</label>
+              <select id="manPaid"><option value="other" selected>Bank / other (not the till)</option><option value="cash">Cash from the till</option><option value="online">Mobile money</option></select>
             </div>
 
             <div id="manualItemsWrap"></div>
@@ -97,7 +56,6 @@
             <select id="filterSource">
               <option value="">All sources</option>
               <option value="manual">Manual Entry</option>
-              <option value="excel">Excel Import</option>
             </select>
             <select id="filterPeriod">
               <option value="all">All time</option>

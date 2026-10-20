@@ -127,7 +127,7 @@ async function openDebtModal(id) {
     document.getElementById('paymentForm').style.display = 'none';
     document.getElementById('debtRecordPaymentWrap').style.display = '';
     document.getElementById('paymentAlert').innerHTML = '';
-    document.getElementById('payDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('payDate').value = adminToday();
     document.getElementById('debtModalBackdrop').classList.add('open');
 
     await refreshDebtDetail();
@@ -231,7 +231,7 @@ async function recordPayment(e) {
     alertBox.innerHTML = `<div class="alert alert-success">${adminEscapeHtml(res.message)}</div>`;
     adminToast(res.message || 'Payment recorded.', 'success');
     document.getElementById('paymentForm').reset();
-    document.getElementById('payDate').value = new Date().toISOString().slice(0, 10);
+    document.getElementById('payDate').value = adminToday();
     document.getElementById('paymentForm').style.display = 'none';
     document.getElementById('debtRecordPaymentWrap').style.display = '';
 

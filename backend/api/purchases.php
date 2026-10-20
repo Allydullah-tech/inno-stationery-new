@@ -67,6 +67,7 @@ function resolve_purchase_csv_header(array $header): array
 {
     $aliases = [
         'product_name' => ['product_name', 'product', 'item', 'item_name', 'name', 'description'],
+        'variant' => ['variant', 'type', 'types', 'variety'],
         'quantity' => ['quantity', 'qty', 'quantity_received', 'units', 'units_received'],
         'buy_price' => ['buy_price', 'amount', 'unit_price', 'unit_cost', 'cost', 'price_per_unit', 'buying_price', 'unit_amount'],
         'new_sell_price' => ['new_sell_price', 'sell_price', 'selling_price', 'sale_price'],
@@ -94,6 +95,7 @@ function map_csv_row_to_canonical(array $row, array $colMap): array
     };
     return [
         'product_name' => $get('product_name'),
+        'variant' => $get('variant'),
         'quantity' => $get('quantity'),
         'buy_price' => $get('buy_price'),
         'new_sell_price' => $get('new_sell_price'),
@@ -114,29 +116,58 @@ function normalize_purchase_row(array $row): array
     $buyPrice = $row['buy_price'] ?? (isset($row['pack_price'], $row['pack_size']) && $row['pack_size'] > 0 ? $row['pack_price'] / $row['pack_size'] : ($row['pack_price'] ?? 0));
     return [
         'product_name' => trim($row['product_name'] ?? ''),
+        'variant' => trim($row['variant'] ?? ''),
         'quantity' => (float) $quantity,
         'buy_price' => (float) $buyPrice,
         'new_sell_price' => isset($row['new_sell_price']) && $row['new_sell_price'] !== '' ? (float) $row['new_sell_price'] : null,
     ];
 }
 
-/** Look up whether a product with this name already exists, and its current prices. */
-function lookup_existing_product(PDO $pdo, string $productName): ?array
+/**
+ * Look up an existing product type by product name + type name.
+ * If no type is given, a legacy display name like "Pen - Blue" also matches.
+ */
+function lookup_existing_product(PDO $pdo, string $productName, string $variant = ''): ?array
 {
-    $stmt = $pdo->prepare('SELECT id, price, buy_price FROM products WHERE name = ? LIMIT 1');
-    $stmt->execute([$productName]);
+    $stmt = $pdo->prepare('SELECT id, price, buy_price FROM products WHERE name = ? AND variant = ? LIMIT 1');
+    $stmt->execute([$productName, $variant]);
     $row = $stmt->fetch();
+    if (!$row && $variant === '') {
+        $stmt = $pdo->prepare("SELECT id, price, buy_price FROM products
+                               WHERE CONCAT_WS(' - ', name, NULLIF(variant, '')) = ? LIMIT 1");
+        $stmt->execute([$productName]);
+        $row = $stmt->fetch();
+    }
     return $row ?: null;
+}
+
+/** Make sure products has the unit column (added once, silently). */
+function ensure_product_unit_column(PDO $pdo): void
+{
+    static $done = false;
+    if ($done) return;
+    $done = true;
+    try {
+        if (!$pdo->query("SHOW COLUMNS FROM products LIKE 'unit'")->fetch()) {
+            $pdo->exec("ALTER TABLE products ADD COLUMN unit VARCHAR(30) NOT NULL DEFAULT 'pcs'");
+        }
+    } catch (Throwable $e) {
+        error_log('unit column: ' . $e->getMessage());
+    }
 }
 
 /** Apply one purchase line item: update/create product stock + price. */
 function apply_purchase_item(PDO $pdo, array $item): array
 {
     $productName = trim($item['product_name'] ?? '');
+    $variant = trim($item['variant'] ?? '');
     $quantity = (int) round((float) ($item['quantity'] ?? 0));
     $buyPrice = (float) ($item['buy_price'] ?? 0);
     $newSellPrice = isset($item['new_sell_price']) && $item['new_sell_price'] !== '' ? (float) $item['new_sell_price'] : null;
     $productId = !empty($item['product_id']) ? (int) $item['product_id'] : null;
+    $minPrice = isset($item['minimum_price']) && $item['minimum_price'] !== '' && $item['minimum_price'] !== null ? (float) $item['minimum_price'] : null;
+    $unit = mb_substr(trim((string) ($item['unit'] ?? '')), 0, 30);
+    ensure_product_unit_column($pdo);
 
     if ($productName === '' || $buyPrice <= 0 || $quantity <= 0) {
         return [null, 'Each item needs a product name, buy price, and quantity.'];
@@ -147,7 +178,7 @@ function apply_purchase_item(PDO $pdo, array $item): array
 
     // Try to match an existing product by id, or by exact name if no id given.
     if (!$productId) {
-        $existing = lookup_existing_product($pdo, $productName);
+        $existing = lookup_existing_product($pdo, $productName, $variant);
         if ($existing) {
             $productId = (int) $existing['id'];
         }
@@ -160,6 +191,18 @@ function apply_purchase_item(PDO $pdo, array $item): array
             $fields .= ', price = ?';
             $params[] = $newSellPrice;
         }
+        if ($minPrice !== null) {
+            $curPrice = $newSellPrice ?? (float) ($existing['price'] ?? $pdo->query('SELECT price FROM products WHERE id = ' . (int) $productId)->fetchColumn());
+            if ($minPrice > $curPrice) {
+                return [null, "The minimum price of '$productName' cannot be higher than its selling price."];
+            }
+            $fields .= ', minimum_price = ?';
+            $params[] = $minPrice;
+        }
+        if ($unit !== '') {
+            $fields .= ', unit = ?';
+            $params[] = $unit;
+        }
         $params[] = $productId;
         $pdo->prepare("UPDATE products SET $fields WHERE id = ?")->execute($params);
     } else {
@@ -168,16 +211,32 @@ function apply_purchase_item(PDO $pdo, array $item): array
         if ($newSellPrice === null) {
             return [null, "'$productName' is a new product — please provide a selling price for it."];
         }
-        $insert = $pdo->prepare('INSERT INTO products (name, buy_price, price, stock) VALUES (?, ?, ?, ?)');
-        $insert->execute([$productName, $unitBuyPrice, $newSellPrice, $quantityUnits]);
+        // A new type of an existing product joins that product's group and
+        // inherits its category/status/description; otherwise it starts a new product.
+        $siblingStmt = $pdo->prepare('SELECT group_id, category_id, description, status FROM products WHERE name = ? ORDER BY id LIMIT 1');
+        $siblingStmt->execute([$productName]);
+        $sibling = $siblingStmt->fetch();
+
+        if ($minPrice !== null && $minPrice > $newSellPrice) {
+            return [null, "The minimum price of '$productName' cannot be higher than its selling price."];
+        }
+        $insert = $pdo->prepare('INSERT INTO products (group_id, category_id, name, variant, description, status, buy_price, price, stock, minimum_price, unit) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)');
+        $insert->execute([
+            $sibling['group_id'] ?? null, $sibling['category_id'] ?? null, $productName, $variant,
+            $sibling['description'] ?? null, $sibling['status'] ?? 'active', $unitBuyPrice, $newSellPrice, $quantityUnits,
+            $minPrice, $unit !== '' ? $unit : 'pcs',
+        ]);
         $productId = (int) $pdo->lastInsertId();
+        if (!$sibling) {
+            $pdo->prepare('UPDATE products SET group_id = id WHERE id = ?')->execute([$productId]);
+        }
     }
 
     // Internal storage keeps the original pack_size/pack_price/packs_received
     // columns (pack_size fixed at 1) so no database migration is needed.
     return [[
         'product_id' => $productId,
-        'product_name' => $productName,
+        'product_name' => item_display_name($productName, $variant),
         'pack_size' => 1,
         'pack_price' => $buyPrice,
         'packs_received' => $quantity,
@@ -282,7 +341,7 @@ switch (true) {
                 $row = array_combine($header, array_pad($line, count($header), null));
                 $n = normalize_purchase_row(map_csv_row_to_canonical($row, $colMap));
 
-                $existing = $n['product_name'] !== '' ? lookup_existing_product($pdo, $n['product_name']) : null;
+                $existing = $n['product_name'] !== '' ? lookup_existing_product($pdo, $n['product_name'], $n['variant']) : null;
                 $rowError = null;
                 if ($n['product_name'] === '') {
                     $rowError = 'Missing product name.';
@@ -297,6 +356,7 @@ switch (true) {
                 $preview[] = [
                     'product_id' => $existing['id'] ?? null,
                     'product_name' => $n['product_name'],
+                    'variant' => $n['variant'],
                     'quantity' => $n['quantity'],
                     'buy_price' => $n['buy_price'],
                     'new_sell_price' => $n['new_sell_price'] ?? ($existing['price'] ?? null),
@@ -321,9 +381,12 @@ switch (true) {
 
         // ---- (b) Apply: manual entry, or a confirmed/edited CSV review ----
         $body = read_json_body();
-        $purchaseDate = !empty($body['purchase_date']) ? $body['purchase_date'] : date('Y-m-d');
+        $purchaseDate = !empty($body['purchase_date']) ? (string) $body['purchase_date'] : today_str();
+        assert_date_allowed($admin, $purchaseDate);
         $notes = trim($body['notes'] ?? '');
+        $paidFrom = in_array($body['paid_from'] ?? 'other', ['cash', 'online', 'other'], true) ? $body['paid_from'] : 'other';
         $items = $body['items'] ?? [];
+        ensure_product_unit_column($pdo);   // DDL must run before the transaction opens
         $source = in_array($body['source'] ?? '', ['manual', 'excel'], true) ? $body['source'] : 'manual';
 
         if (!is_array($items) || count($items) === 0) {
@@ -343,8 +406,8 @@ switch (true) {
                 $appliedItems[] = $applied;
             }
 
-            $insertPurchase = $pdo->prepare('INSERT INTO purchases (source, total_cost, notes, recorded_by, purchase_date) VALUES (?, ?, ?, ?, ?)');
-            $insertPurchase->execute([$source, $totalCost, $notes ?: null, $admin['id'], $purchaseDate]);
+            $insertPurchase = $pdo->prepare('INSERT INTO purchases (source, total_cost, notes, recorded_by, purchase_date, paid_from) VALUES (?, ?, ?, ?, ?, ?)');
+            $insertPurchase->execute([$source, $totalCost, $notes ?: null, $admin['id'], $purchaseDate, $paidFrom]);
             $purchaseId = $pdo->lastInsertId();
 
             $insertItem = $pdo->prepare('INSERT INTO purchase_items
@@ -363,6 +426,7 @@ switch (true) {
             json_response(['success' => false, 'message' => 'Could not add stock: ' . $e->getMessage()], 400);
         }
 
+        log_activity($pdo, $admin, 'create', 'purchase', $purchaseId, count($appliedItems) . ' item(s) added to stock, total ' . number_format((float) $totalCost) . " (paid from {$paidFrom}, source {$source})");
         json_response([
             'success' => true,
             'message' => count($appliedItems) . ' item(s) added to stock.',

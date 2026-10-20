@@ -189,3 +189,163 @@ function output_csv(string $filename, array $headers, array $rows): void
     fclose($out);
     exit;
 }
+
+/** "Pen" + "Blue" => "Pen - Blue"; no type => just the name. */
+function item_display_name(string $name, ?string $variant): string
+{
+    $variant = trim((string) $variant);
+    return $variant === '' ? $name : $name . ' - ' . $variant;
+}
+
+
+/* ==========================================================================
+   v3 helpers (ported from the edesk system)
+   ========================================================================== */
+
+/** True for a real calendar date in Y-m-d form. */
+function valid_date($d): bool
+{
+    if (!is_string($d) || !preg_match('/^\d{4}-\d{2}-\d{2}$/', $d)) {
+        return false;
+    }
+    [$y, $m, $day] = array_map('intval', explode('-', $d));
+    return checkdate($m, $day, $y);
+}
+
+/** Today's date in the shop's timezone (set in config.php). */
+function today_str(): string
+{
+    return date('Y-m-d');
+}
+
+/** True when the logged-in user is a plain worker. */
+function is_worker(array $admin): bool
+{
+    return ($admin['role'] ?? 'worker') === 'worker';
+}
+
+/**
+ * Workers may only record / change things dated today.
+ * Admins and super admins may use any date up to today.
+ */
+function assert_date_allowed(array $admin, string $date, bool $allowFuture = false): void
+{
+    if (!valid_date($date)) {
+        json_response(['success' => false, 'message' => 'Please provide a valid date (YYYY-MM-DD).'], 400);
+    }
+    if (!$allowFuture && $date > today_str()) {
+        json_response(['success' => false, 'message' => 'Future dates are not allowed here.'], 400);
+    }
+    if (is_worker($admin) && $date !== today_str()) {
+        json_response(['success' => false, 'message' => 'Workers can only use today\'s date. Ask an admin for back-dated entries.'], 403);
+    }
+}
+
+/** Normalise a phone number so 0712..., +255712... and 255712... match. */
+function normalize_phone(string $phone): string
+{
+    $digits = preg_replace('/\D+/', '', $phone);
+    if (strlen($digits) === 12 && strpos($digits, '255') === 0) {
+        $digits = '0' . substr($digits, 3);
+    } elseif (strlen($digits) === 9) {
+        $digits = '0' . $digits;
+    }
+    return $digits;
+}
+
+/** Make a CSV cell safe against spreadsheet formula injection. */
+function csv_safe($v)
+{
+    if (is_string($v) && $v !== '' && strpbrk($v[0], "=+-@\t\r") !== false) {
+        return "'" . $v;
+    }
+    return $v;
+}
+
+/**
+ * Write one row to the activity log. Never throws — logging must not
+ * break the action being logged.
+ */
+function log_activity(PDO $pdo, ?array $admin, string $action, string $entity, $entityId = null, string $description = ''): void
+{
+    try {
+        $name = null;
+        if ($admin && !empty($admin['id'])) {
+            $st = $pdo->prepare('SELECT full_name FROM admins WHERE id = ?');
+            $st->execute([$admin['id']]);
+            $name = $st->fetchColumn() ?: ($admin['username'] ?? null);
+        }
+        $pdo->prepare('INSERT INTO activity_log (admin_id, admin_name, action, entity, entity_id, description, ip_address) VALUES (?,?,?,?,?,?,?)')
+            ->execute([
+                $admin['id'] ?? null,
+                $name,
+                $action,
+                $entity,
+                $entityId !== null ? (string) $entityId : null,
+                mb_substr($description, 0, 500),
+                $_SERVER['REMOTE_ADDR'] ?? null,
+            ]);
+    } catch (Throwable $e) {
+        // ignore
+    }
+}
+
+/** Cash-sale payment methods that count as "money in the drawer". */
+function is_cash_method(?string $m): bool
+{
+    return $m === 'cash_in_hand' || $m === 'cash';
+}
+
+/** Find or create a customer by phone; returns customer row (or null if no phone). */
+function upsert_customer(PDO $pdo, string $name, string $phone): ?array
+{
+    $phone = normalize_phone($phone);
+    $name = trim($name);
+    if ($phone === '' || $name === '') {
+        return null;
+    }
+    $st = $pdo->prepare('SELECT * FROM customers WHERE phone = ? LIMIT 1');
+    $st->execute([$phone]);
+    $c = $st->fetch();
+    if ($c) {
+        return $c;
+    }
+    $pdo->prepare('INSERT INTO customers (name, phone) VALUES (?, ?)')->execute([$name, $phone]);
+    $st->execute([$phone]);
+    return $st->fetch() ?: null;
+}
+
+/**
+ * Re-evaluate a customer's risk. A customer with N or more overdue debts
+ * (N = setting restrict_after_overdue, default 3) is restricted from new
+ * credit until an admin lifts it. A lifted restriction is not re-applied
+ * until a NEW overdue debt appears after the lift.
+ */
+function refresh_customer_risk(PDO $pdo, int $customerId): void
+{
+    $limit = max(1, (int) get_setting('restrict_after_overdue', '3'));
+    $c = $pdo->prepare('SELECT * FROM customers WHERE id = ?');
+    $c->execute([$customerId]);
+    $cust = $c->fetch();
+    if (!$cust) {
+        return;
+    }
+    $since = $cust['lifted_at'] ?: '1970-01-01 00:00:00';
+    $st = $pdo->prepare('SELECT COUNT(*) FROM debts WHERE customer_id = ? AND balance > 0.004 AND payment_deadline < ? AND payment_deadline >= DATE(?)');
+    $st->execute([$customerId, today_str(), $since]);
+    $overdue = (int) $st->fetchColumn();
+    if ($cust['status'] === 'active' && $overdue >= $limit) {
+        $pdo->prepare("UPDATE customers SET status='restricted', restricted_at=NOW(), restriction_reason=? WHERE id=?")
+            ->execute([$overdue . ' overdue debts — credit blocked until an admin lifts it', $customerId]);
+    }
+}
+
+/* ---- Shop time zone: PHP and MySQL must agree on what "today" and "now" are ---- */
+date_default_timezone_set('Africa/Dar_es_Salaam');
+if (function_exists('get_db')) {
+    try {
+        get_db()->exec("SET time_zone = '" . date('P') . "'");
+    } catch (Throwable $e) {
+        // keep going with the server default
+    }
+}

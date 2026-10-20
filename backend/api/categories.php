@@ -9,7 +9,7 @@ $pdo = get_db();
 
 switch ($method) {
     case 'GET':
-        $stmt = $pdo->query('SELECT c.*, (SELECT COUNT(*) FROM products p WHERE p.category_id = c.id AND p.status = "active") AS product_count
+        $stmt = $pdo->query('SELECT c.*, (SELECT COUNT(DISTINCT p.group_id) FROM products p WHERE p.category_id = c.id AND p.status = "active") AS product_count
                               FROM categories c ORDER BY c.name ASC');
         json_response(['success' => true, 'categories' => $stmt->fetchAll()]);
         break;

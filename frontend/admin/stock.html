@@ -5,6 +5,17 @@
 <title>Stock — INNO's Stationery Internal System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
+<style>
+  .type-head, .type-row { display:grid; grid-template-columns: 1.5fr .9fr .9fr .9fr .7fr .7fr 32px; gap:6px; align-items:center; }
+  .type-head { font-size:11.5px; font-weight:600; color:var(--ink-soft); margin-bottom:4px; }
+  .type-row { margin-bottom:6px; }
+  .type-row input { width:100%; padding:8px 9px; border:1.5px solid var(--line-soft); border-radius:8px; min-width:0; }
+  .type-list { display:flex; flex-direction:column; align-items:flex-start; gap:4px; }
+  .type-chip { display:inline-block; padding:2px 9px; margin:0; border-radius:999px; background:var(--line-soft); font-size:12.5px; }
+  .type-chip.low { background:#fde8e8; color:#a12a2a; }
+  @media (max-width:620px){ .type-head{display:none;} .type-row{grid-template-columns:1fr 1fr;} }
+</style>
 </head>
 <body class="admin-body">
 
@@ -18,6 +29,17 @@
         <div class="skeleton" style="height:76px;"></div>
         <div class="skeleton" style="height:76px;"></div>
         <div class="skeleton" style="height:76px;"></div>
+      </div>
+
+      <div class="panel" id="categoryPanel">
+        <div class="panel-head"><h3>Categories</h3></div>
+        <div class="panel-body pad">
+          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;" id="categoryChipsAdmin"></div>
+          <form id="newCategoryForm" style="display:flex;gap:10px;max-width:420px;">
+            <input type="text" id="newCategoryName" placeholder="New category name" style="flex:1;padding:9px 12px;border:1.5px solid var(--line-soft);border-radius:8px;">
+            <button class="btn btn-outline btn-sm" type="submit">Add</button>
+          </form>
+        </div>
       </div>
 
       <div class="panel">
@@ -38,22 +60,11 @@
         </div>
         <div class="panel-body table-wrap">
           <table class="data-table">
-            <thead><tr><th></th><th>Name</th><th>Category</th><th>Buy Price</th><th>Sell Price</th><th>Stock</th><th>Status</th><th></th></tr></thead>
+            <thead><tr><th>Product Name</th><th>Category</th><th>Types</th><th>Total Stock</th><th>Status</th><th>Actions</th></tr></thead>
             <tbody id="productsTbody">
-              <tr><td colspan="8" style="text-align:center;padding:30px;">Loading…</td></tr>
+              <tr><td colspan="6" style="text-align:center;padding:30px;">Loading…</td></tr>
             </tbody>
           </table>
-        </div>
-      </div>
-
-      <div class="panel" id="categoryPanel">
-        <div class="panel-head"><h3>Categories</h3></div>
-        <div class="panel-body pad">
-          <div style="display:flex;gap:10px;flex-wrap:wrap;margin-bottom:16px;" id="categoryChipsAdmin"></div>
-          <form id="newCategoryForm" style="display:flex;gap:10px;max-width:420px;">
-            <input type="text" id="newCategoryName" placeholder="New category name" style="flex:1;padding:9px 12px;border:1.5px solid var(--line-soft);border-radius:8px;">
-            <button class="btn btn-outline btn-sm" type="submit">Add</button>
-          </form>
         </div>
       </div>
 
@@ -63,7 +74,7 @@
 
 <!-- Product form modal -->
 <div class="modal-backdrop" id="productModalBackdrop">
-  <div class="modal" style="max-width:560px;">
+  <div class="modal" style="max-width:720px;">
     <div class="modal-head">
       <h3 id="productModalTitle">Add Product</h3>
       <button class="modal-close" id="productModalClose">&times;</button>
@@ -81,26 +92,6 @@
         </div>
         <div class="field-row">
           <div class="field">
-            <label for="pf_buy_price">Buy price (cost, per unit) *</label>
-            <input type="number" id="pf_buy_price" min="0" step="1" required>
-          </div>
-          <div class="field">
-            <label for="pf_price">Sell price (per unit) *</label>
-            <input type="number" id="pf_price" min="0" step="1" required>
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
-            <label for="pf_stock">Stock quantity *</label>
-            <input type="number" id="pf_stock" min="0" step="1" required>
-          </div>
-          <div class="field">
-            <label for="pf_low_stock_threshold">Low stock alert threshold</label>
-            <input type="number" id="pf_low_stock_threshold" min="0" step="1" value="5">
-          </div>
-        </div>
-        <div class="field-row">
-          <div class="field">
             <label for="pf_category">Category</label>
             <select id="pf_category"><option value="">— none —</option></select>
           </div>
@@ -113,8 +104,11 @@
           </div>
         </div>
         <div class="field">
-          <label for="pf_image">Product image</label>
-          <input type="file" id="pf_image" accept=".jpg,.jpeg,.png,.webp">
+          <label>Types *</label>
+          <div class="hint" style="margin:0 0 8px;">e.g. colours or sizes. If the product has only one kind, leave the type name blank.</div>
+          <div class="type-head"><span>Type name</span><span>Buy price</span><span>Sell price</span><span title="Lowest price a cashier may sell at">Min price</span><span>Stock</span><span>Low alert</span><span></span></div>
+          <div id="pf_types"></div>
+          <button type="button" class="btn btn-outline btn-sm" id="addTypeBtn" style="margin-top:8px;">+ Add type</button>
         </div>
         <div id="productFormAlert"></div>
         <button type="submit" class="btn btn-primary btn-block" id="productSaveBtn">Save Product</button>

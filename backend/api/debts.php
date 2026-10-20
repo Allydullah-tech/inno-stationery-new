@@ -154,8 +154,8 @@ switch ($method) {
         $body = read_json_body();
 
         $debtId = (int) ($body['debt_id'] ?? 0);
-        $amount = isset($body['amount']) ? (float) $body['amount'] : 0;
-        $paymentDate = !empty($body['payment_date']) ? $body['payment_date'] : date('Y-m-d');
+        $amount = isset($body['amount']) ? round((float) $body['amount'], 2) : 0;
+        $paymentDate = !empty($body['payment_date']) ? (string) $body['payment_date'] : today_str();
         $paymentMethod = $body['payment_method'] ?? 'cash';
         $referenceNo = trim($body['reference_no'] ?? '');
         $notes = trim($body['notes'] ?? '');
@@ -163,46 +163,51 @@ switch ($method) {
         if (!$debtId) {
             json_response(['success' => false, 'message' => 'Missing debt reference.'], 400);
         }
-        if ($amount <= 0) {
+        if ($amount <= 0 || $amount > 1000000000) {
             json_response(['success' => false, 'message' => 'Please enter a valid payment amount.'], 400);
         }
         if (!in_array($paymentMethod, DEBT_PAYMENT_METHODS, true)) {
             json_response(['success' => false, 'message' => 'Please select a valid payment method.'], 400);
         }
-        if (!DateTime::createFromFormat('Y-m-d', $paymentDate)) {
-            json_response(['success' => false, 'message' => 'Please provide a valid payment date.'], 400);
+        if (mb_strlen($referenceNo) > 80 || mb_strlen($notes) > 255) {
+            json_response(['success' => false, 'message' => 'Reference or notes are too long.'], 400);
         }
-
-        $stmt = $pdo->prepare('SELECT * FROM debts WHERE id = ? LIMIT 1');
-        $stmt->execute([$debtId]);
-        $debt = $stmt->fetch();
-        if (!$debt) {
-            json_response(['success' => false, 'message' => 'Debt record not found.'], 404);
-        }
-
-        $currentBalance = round((float) $debt['balance'], 2);
-        if ($currentBalance <= 0) {
-            json_response(['success' => false, 'message' => 'This debt is already fully paid.'], 400);
-        }
-        // Allow a tiny rounding tolerance, but block genuine overpayment.
-        if ($amount > $currentBalance + 0.01) {
-            json_response(['success' => false, 'message' => 'Payment amount (' . number_format($amount, 2) . ') exceeds the remaining balance of ' . number_format($currentBalance, 2) . '. Overpayments are not supported yet — please record the exact balance or a partial amount.'], 400);
-        }
+        // valid date, not in the future, and workers may only use today
+        assert_date_allowed($admin, $paymentDate);
 
         $pdo->beginTransaction();
         try {
-            $insert = $pdo->prepare('INSERT INTO debt_payments
-                (debt_id, amount, payment_date, payment_method, reference_no, notes, recorded_by)
-                VALUES (?, ?, ?, ?, ?, ?, ?)');
-            $insert->execute([$debtId, $amount, $paymentDate, $paymentMethod, $referenceNo ?: null, $notes ?: null, $admin['id']]);
+            // Lock the debt row so two quick submissions cannot both pass the balance check.
+            $stmt = $pdo->prepare('SELECT * FROM debts WHERE id = ? LIMIT 1 FOR UPDATE');
+            $stmt->execute([$debtId]);
+            $debt = $stmt->fetch();
+            if (!$debt) {
+                throw new RuntimeException('Debt record not found.');
+            }
+            if ($paymentDate < $debt['sale_date']) {
+                throw new RuntimeException('A payment cannot be dated before the sale (' . $debt['sale_date'] . ').');
+            }
+            $currentBalance = round((float) $debt['balance'], 2);
+            if ($currentBalance <= 0) {
+                throw new RuntimeException('This debt is already fully paid.');
+            }
+            if ($amount > $currentBalance + 0.01) {
+                throw new RuntimeException('Payment amount (' . number_format($amount, 2) . ') exceeds the remaining balance of ' . number_format($currentBalance, 2) . '. Please record the exact balance or a partial amount.');
+            }
+            $pdo->prepare('INSERT INTO debt_payments (debt_id, amount, payment_date, payment_method, reference_no, notes, recorded_by) VALUES (?, ?, ?, ?, ?, ?, ?)')
+                ->execute([$debtId, $amount, $paymentDate, $paymentMethod, $referenceNo ?: null, $notes ?: null, $admin['id']]);
             $paymentId = $pdo->lastInsertId();
-
             $result = resync_debt($pdo, $debtId);
             $pdo->commit();
+        } catch (RuntimeException $e) {
+            $pdo->rollBack();
+            json_response(['success' => false, 'message' => $e->getMessage()], 400);
         } catch (Throwable $e) {
             $pdo->rollBack();
+            error_log('debt payment failed: ' . $e->getMessage());
             json_response(['success' => false, 'message' => 'Could not record payment. Please try again.'], 500);
         }
+        log_activity($pdo, $admin, 'create', 'debt_payment', $debtId, 'Payment of ' . number_format($amount) . " ({$paymentMethod}) from {$debt['customer_name']}; balance now " . number_format($result['balance']));
 
         json_response([
             'success' => true,
@@ -216,7 +221,7 @@ switch ($method) {
 
     // Delete a mistaken payment (admins/super admins only) — recalculates the debt.
     case 'DELETE':
-        require_non_worker();
+        $admin = require_non_worker();
         $paymentId = (int) ($_GET['payment_id'] ?? 0);
         if (!$paymentId) {
             json_response(['success' => false, 'message' => 'Missing payment id.'], 400);
@@ -238,6 +243,7 @@ switch ($method) {
             json_response(['success' => false, 'message' => 'Could not delete payment.'], 500);
         }
 
+        log_activity($pdo, $admin, 'delete', 'debt_payment', $payment['debt_id'], 'Payment of ' . number_format((float) $payment['amount']) . ' (' . $payment['payment_method'] . ') dated ' . $payment['payment_date'] . ' deleted');
         json_response(['success' => true, 'message' => 'Payment deleted and balance recalculated.']);
         break;
 

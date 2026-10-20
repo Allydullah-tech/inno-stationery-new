@@ -1,6 +1,7 @@
 /* Stock page logic */
 let currentAdmin = null;
 let adminCategories = [];
+let productGroups = [];
 
 (async () => {
     const admin = await guardAdminPage();
@@ -26,6 +27,7 @@ let adminCategories = [];
     document.getElementById('productModalClose').addEventListener('click', closeProductModal);
     document.getElementById('productModalBackdrop').addEventListener('click', (e) => { if (e.target.id === 'productModalBackdrop') closeProductModal(); });
     document.getElementById('productForm').addEventListener('submit', saveProduct);
+    document.getElementById('addTypeBtn').addEventListener('click', () => addTypeRow());
     document.getElementById('filterCategory').addEventListener('change', loadProductsAdmin);
     document.getElementById('filterLowStock').addEventListener('change', () => { updateDownloadBtn(); loadProductsAdmin(); });
     document.getElementById('stockSearch').addEventListener('input', () => {
@@ -86,42 +88,40 @@ async function deleteCategory(id) {
 
 async function loadProductsAdmin() {
     const tbody = document.getElementById('productsTbody');
-    tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:30px;">Loading…</td></tr>`;
+    tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:30px;">Loading…</td></tr>`;
 
     const cat = document.getElementById('filterCategory').value;
     const lowStock = document.getElementById('filterLowStock').checked;
     const search = document.getElementById('stockSearch').value.trim();
-    let query = '?';
+    let query = '?grouped=1&';
     if (cat) query += `category=${encodeURIComponent(cat)}&`;
     if (lowStock) query += `low_stock=1&`;
     if (search) query += `search=${encodeURIComponent(search)}&`;
 
     const res = await adminApi('/products.php' + query);
-    const products = res.success ? res.products : [];
+    productGroups = res.success ? res.groups : [];
 
-    renderStockSummary(res.summary || { total_products: products.length, total_items: 0, total_value: 0 });
+    renderStockSummary(res.summary || { total_products: productGroups.length, total_items: 0, total_value: 0 });
 
-    if (!products.length) {
-        tbody.innerHTML = `<tr><td colspan="8" style="text-align:center;padding:34px;color:var(--ink-soft);">No products found${search || cat || lowStock ? ' for the current filters' : ''}.</td></tr>`;
+    if (!productGroups.length) {
+        tbody.innerHTML = `<tr><td colspan="6" style="text-align:center;padding:34px;color:var(--ink-soft);">No products found${search || cat || lowStock ? ' for the current filters' : ''}.</td></tr>`;
         return;
     }
 
     const isWorker = currentAdmin.role === 'worker';
 
-    tbody.innerHTML = products.map(p => `
+    tbody.innerHTML = productGroups.map(g => `
       <tr>
-        <td><img src="${p.image_url || '../assets/placeholder.svg'}" class="table-thumb" onerror="this.src='../assets/placeholder.svg'"></td>
-        <td><strong>${adminEscapeHtml(p.name)}</strong></td>
-        <td>${adminEscapeHtml(p.category_name || '—')}</td>
-        <td class="mono">${adminFormatMoney(p.buy_price)}</td>
-        <td class="mono">${adminFormatMoney(p.price)}</td>
-        <td>${p.stock}${p.is_low_stock ? ' <span class="status-pill status-low">Low</span>' : ''}</td>
-        <td><span class="status-pill status-${p.status === 'active' ? 'active' : 'inactive'}">${p.status}</span></td>
+        <td><strong>${adminEscapeHtml(g.name)}</strong></td>
+        <td>${adminEscapeHtml(g.category_name || '—')}</td>
+        <td><div class="type-list">${g.types.map(t => `<span class="type-chip${t.is_low_stock ? ' low' : ''}" title="Buy ${adminFormatMoney(t.buy_price)} · Sell ${adminFormatMoney(t.price)}">${adminEscapeHtml(t.variant || 'Standard')} · ${t.stock}${t.unit && t.unit !== 'pcs' ? ' ' + adminEscapeHtml(t.unit) : ''}</span>`).join('')}</div></td>
+        <td>${g.total_stock}${g.has_low_stock ? ' <span class="status-pill status-low">Low</span>' : ''}</td>
+        <td><span class="status-pill status-${g.status === 'active' ? 'active' : 'inactive'}">${g.status}</span></td>
         <td>
           ${isWorker ? '' : `
           <div style="display:flex;gap:6px;">
-            <button class="icon-btn" onclick='openProductModal(${JSON.stringify(p).replace(/'/g, "&apos;")})' aria-label="Edit">${adminIcon('edit', 15)}</button>
-            <button class="icon-btn danger" onclick="deleteProduct(${p.id})" aria-label="Delete">${adminIcon('trash', 15)}</button>
+            <button class="icon-btn" onclick="openProductModal(${g.group_id})" aria-label="Edit">${adminIcon('edit', 15)}</button>
+            <button class="icon-btn danger" onclick="deleteProduct(${g.group_id})" aria-label="Delete">${adminIcon('trash', 15)}</button>
           </div>`}
         </td>
       </tr>
@@ -145,23 +145,41 @@ function renderStockSummary(summary) {
     `;
 }
 
-function openProductModal(product = null) {
+function addTypeRow(t = {}) {
+    const row = document.createElement('div');
+    row.className = 'type-row';
+    row.dataset.id = t.id || '';
+    row.innerHTML = `
+      <input type="text" class="tr-variant" placeholder="e.g. Blue" value="${adminEscapeHtml(t.variant || '')}">
+      <input type="number" class="tr-buy" min="0" step="1" required placeholder="Buy" value="${t.buy_price ?? ''}">
+      <input type="number" class="tr-price" min="0" step="1" required placeholder="Sell" value="${t.price ?? ''}">
+      <input type="number" class="tr-min" min="0" step="1" placeholder="Min" title="Lowest price a cashier may sell at (optional)" value="${t.minimum_price ?? ''}">
+      <input type="number" class="tr-stock" min="0" step="1" required placeholder="Qty" value="${t.stock ?? ''}">
+      <input type="number" class="tr-low" min="0" step="1" value="${t.low_stock_threshold ?? 5}">
+      <button type="button" class="icon-btn danger" aria-label="Remove type">${adminIcon('trash', 14)}</button>`;
+    row.querySelector('button').addEventListener('click', () => {
+        if (document.querySelectorAll('#pf_types .type-row').length > 1) row.remove();
+        else adminToast('A product needs at least one type.', 'error');
+    });
+    document.getElementById('pf_types').appendChild(row);
+}
+
+function openProductModal(groupId = null) {
+    const group = groupId ? productGroups.find(g => g.group_id === groupId) : null;
     document.getElementById('productFormAlert').innerHTML = '';
     document.getElementById('productForm').reset();
-    document.getElementById('pf_id').value = product ? product.id : '';
-    document.getElementById('productModalTitle').textContent = product ? 'Edit Product' : 'Add Product';
+    document.getElementById('pf_id').value = group ? group.group_id : '';
+    document.getElementById('productModalTitle').textContent = group ? 'Edit Product' : 'Add Product';
+    document.getElementById('pf_types').innerHTML = '';
 
-    if (product) {
-        document.getElementById('pf_name').value = product.name;
-        document.getElementById('pf_description').value = product.description || '';
-        document.getElementById('pf_buy_price').value = product.buy_price;
-        document.getElementById('pf_price').value = product.price;
-        document.getElementById('pf_stock').value = product.stock;
-        document.getElementById('pf_low_stock_threshold').value = product.low_stock_threshold;
-        document.getElementById('pf_category').value = product.category_id || '';
-        document.getElementById('pf_status').value = product.status;
+    if (group) {
+        document.getElementById('pf_name').value = group.name;
+        document.getElementById('pf_description').value = group.description || '';
+        document.getElementById('pf_category').value = group.category_id || '';
+        document.getElementById('pf_status').value = group.status;
+        group.types.forEach(t => addTypeRow(t));
     } else {
-        document.getElementById('pf_low_stock_threshold').value = 5;
+        addTypeRow();
     }
 
     document.getElementById('productModalBackdrop').classList.add('open');
@@ -176,17 +194,21 @@ async function saveProduct(e) {
     alertBox.innerHTML = '';
 
     const id = document.getElementById('pf_id').value;
-    const fd = new FormData();
-    fd.append('name', document.getElementById('pf_name').value.trim());
-    fd.append('description', document.getElementById('pf_description').value.trim());
-    fd.append('buy_price', document.getElementById('pf_buy_price').value);
-    fd.append('price', document.getElementById('pf_price').value);
-    fd.append('stock', document.getElementById('pf_stock').value);
-    fd.append('low_stock_threshold', document.getElementById('pf_low_stock_threshold').value);
-    fd.append('category_id', document.getElementById('pf_category').value);
-    fd.append('status', document.getElementById('pf_status').value);
-    const imgFile = document.getElementById('pf_image').files[0];
-    if (imgFile) fd.append('image', imgFile);
+    const payload = {
+        name: document.getElementById('pf_name').value.trim(),
+        description: document.getElementById('pf_description').value.trim(),
+        category_id: document.getElementById('pf_category').value || null,
+        status: document.getElementById('pf_status').value,
+        types: [...document.querySelectorAll('#pf_types .type-row')].map(r => ({
+            id: r.dataset.id ? Number(r.dataset.id) : 0,
+            variant: r.querySelector('.tr-variant').value.trim(),
+            buy_price: r.querySelector('.tr-buy').value,
+            price: r.querySelector('.tr-price').value,
+            stock: r.querySelector('.tr-stock').value,
+            low_stock_threshold: r.querySelector('.tr-low').value,
+            minimum_price: r.querySelector('.tr-min').value,
+        })),
+    };
 
     const btn = document.getElementById('productSaveBtn');
     btn.disabled = true;
@@ -194,11 +216,10 @@ async function saveProduct(e) {
 
     let res;
     if (id) {
-        fd.append('id', id);
-        fd.append('_method', 'PUT');
-        res = await adminApi('/products.php', { method: 'POST', body: fd, isForm: true });
+        payload.group_id = Number(id);
+        res = await adminApi('/products.php', { method: 'PUT', body: payload });
     } else {
-        res = await adminApi('/products.php', { method: 'POST', body: fd, isForm: true });
+        res = await adminApi('/products.php', { method: 'POST', body: payload });
     }
 
     btn.disabled = false;
@@ -215,9 +236,9 @@ async function saveProduct(e) {
     loadCategoriesForAdmin();
 }
 
-async function deleteProduct(id) {
-    if (!confirm('Delete this product? This cannot be undone.')) return;
-    const res = await adminApi('/products.php?id=' + id, { method: 'DELETE' });
-    if (res.success) { adminToast('Product deleted.', 'success'); loadProductsAdmin(); }
+async function deleteProduct(groupId) {
+    if (!confirm('Delete this product and all its types? This cannot be undone.')) return;
+    const res = await adminApi('/products.php?group_id=' + groupId, { method: 'DELETE' });
+    if (res.success) { adminToast('Product deleted.', 'success'); loadProductsAdmin(); loadCategoriesForAdmin(); }
     else adminToast(res.message || 'Could not delete.', 'error');
 }

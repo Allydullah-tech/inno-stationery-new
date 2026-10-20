@@ -6,40 +6,91 @@
     <title>Login — INNO's Stationery Internal System</title>
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <link rel="stylesheet" href="../css/admin.css">
+    <link rel="stylesheet" href="../css/login.css">
 </head>
 
-<body class="admin-body">
+<body class="admin-body login-body">
 
-    <div class="auth-page">
-        <div class="auth-card">
-            <div class="auth-brand">
-                <div class="mark">I</div>
-                <h2 style="font-size:16px;margin-bottom:2px;">Staff Login</h2>
-                <p style="font-size:12px;margin:0;">INNO's Stationery — internal system</p>
-            </div>
+    <div class="login-page">
 
-            <div id="loginAlert"></div>
+        <!-- ============ Animated brand panel ============ -->
+        <aside class="login-brand" aria-hidden="false">
+            <div class="lb-blob lb1"></div>
+            <div class="lb-blob lb2"></div>
+            <div class="lb-blob lb3"></div>
+            <div class="lb-grid"></div>
 
-            <form id="loginForm">
-                <div class="field">
-                    <label for="username">Username or email</label>
-                    <input type="text" id="username" required autocomplete="username">
-                </div>
-                <div class="field">
-                    <label for="password">Password</label>
-                    <input type="password" id="password" required autocomplete="current-password">
-                </div>
-                <button type="submit" class="btn btn-primary btn-block" id="loginBtn">Log In</button>
-            </form>
-            <p style="text-align:center;">
-                <a href="index.html" style="color:#000;font-weight:600;text-decoration:none;">
-                    Back Home
+            <svg class="lb-ico i1" viewBox="0 0 64 64"><path d="M12 52l4-14L44 10a6 6 0 018 8L24 46z"/><path d="M12 52l14-4"/><path d="M40 14l10 10"/></svg>
+            <svg class="lb-ico i2" viewBox="0 0 64 64"><rect x="8" y="22" width="48" height="20" rx="3"/><path d="M16 22v8M24 22v5M32 22v8M40 22v5M48 22v8"/></svg>
+            <svg class="lb-ico i3" viewBox="0 0 64 64"><rect x="14" y="8" width="36" height="48" rx="4"/><path d="M22 8v48M30 20h14M30 28h14M30 36h9"/></svg>
+            <svg class="lb-ico i4" viewBox="0 0 64 64"><circle cx="32" cy="32" r="20"/><path d="M32 18v14l9 6"/></svg>
+
+            <div class="lb-content">
+                <a href="../index.html" class="lb-logo">
+                    <span class="lb-mark">I</span>
+                    <span class="lb-name">INNO's Stationery<small>Internal System</small></span>
                 </a>
-            </p>
-            <p style="text-align:center;margin-top:14px;font-size:12px;">
-                <a href="forgot-password.html" style="color:var(--navy);font-weight:600;">Forgot your password?</a>
-            </p>
-        </div>
+
+                <h1 class="lb-title">
+                    <span><i>Welcome</i></span>
+                    <span><i>back to your</i></span>
+                    <span><i class="lb-accent">workspace.</i></span>
+                </h1>
+                <p class="lb-sub">Sales, stock, debts and reports — all in one secure place.</p>
+
+                <ul class="lb-list">
+                    <li><span class="lb-tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Record sales in seconds</li>
+                    <li><span class="lb-tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Live stock and debt tracking</li>
+                    <li><span class="lb-tick"><svg viewBox="0 0 24 24"><path d="M5 13l4 4L19 7"/></svg></span>Clear reports and profit insights</li>
+                </ul>
+
+                <div class="lb-bars" aria-hidden="true">
+                    <span style="--h:40%"></span><span style="--h:62%"></span><span style="--h:48%"></span>
+                    <span style="--h:78%"></span><span style="--h:60%"></span><span style="--h:92%"></span><span style="--h:70%"></span>
+                </div>
+            </div>
+        </aside>
+
+        <!-- ============ Login form ============ -->
+        <main class="login-panel">
+            <div class="login-card">
+                <div class="login-head">
+                    <div class="login-mark">
+                        <span class="ring r1"></span><span class="ring r2"></span>
+                        <b>I</b>
+                    </div>
+                    <p class="login-greet" id="greet">Welcome back</p>
+                    <h2>Staff Login</h2>
+                    <p class="login-note">INNO's Stationery — internal system</p>
+                </div>
+
+                <div id="loginAlert"></div>
+
+                <form id="loginForm">
+                    <div class="field lf-1">
+                        <label for="username">Username or email</label>
+                        <div class="input-wrap">
+                            <svg class="in-ico" viewBox="0 0 24 24"><circle cx="12" cy="8" r="4"/><path d="M4 21c0-4 3.6-7 8-7s8 3 8 7"/></svg>
+                            <input type="text" id="username" required autocomplete="username" placeholder="Enter your username">
+                        </div>
+                    </div>
+                    <div class="field lf-2">
+                        <label for="password">Password</label>
+                        <div class="input-wrap">
+                            <svg class="in-ico" viewBox="0 0 24 24"><rect x="5" y="11" width="14" height="10" rx="2"/><path d="M8 11V8a4 4 0 018 0v3"/></svg>
+                            <input type="password" id="password" required autocomplete="current-password" placeholder="Enter your password">
+                        </div>
+                        <div class="caps-warn" id="capsWarn">Caps Lock is on</div>
+                    </div>
+                    <button type="submit" class="btn btn-primary btn-block login-btn lf-3" id="loginBtn">Log In</button>
+                </form>
+
+                <div class="login-links lf-4">
+                    <a href="forgot-password.html" class="forgot">Forgot your password?</a>
+                    <a href="../index.html" class="home">← Back Home</a>
+                </div>
+            </div>
+        </main>
     </div>
 
     <script src="admin-core.js"></script>
@@ -85,6 +136,23 @@
                 const data = await res.json();
                 if (data.authenticated) window.location.href = 'dashboard.html';
             } catch (e) {}
+        })();
+
+        /* ---- visual extras only (no effect on login logic) ---- */
+        (function() {
+            // time-based greeting
+            var h = new Date().getHours();
+            var g = h < 12 ? 'Good morning' : (h < 17 ? 'Good afternoon' : 'Good evening');
+            document.getElementById('greet').textContent = g + ' 👋';
+
+            // Caps Lock warning on the password field
+            var pw = document.getElementById('password'), warn = document.getElementById('capsWarn');
+            function caps(e) {
+                if (e.getModifierState) warn.classList.toggle('show', e.getModifierState('CapsLock'));
+            }
+            pw.addEventListener('keydown', caps);
+            pw.addEventListener('keyup', caps);
+            pw.addEventListener('blur', function() { warn.classList.remove('show'); });
         })();
     </script>
 </body>

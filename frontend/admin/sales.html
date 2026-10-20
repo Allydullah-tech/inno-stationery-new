@@ -5,295 +5,117 @@
 <title>Sales — INNO's Stationery Internal System</title>
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <link rel="stylesheet" href="../css/admin.css">
+<link rel="stylesheet" href="../css/admin-v3.css">
 </head>
 <body class="admin-body">
-
 <div class="admin-shell">
   <div id="adminSidebarWrap"></div>
   <div class="admin-main">
     <div class="admin-topbar" id="adminTopbar"></div>
     <div class="admin-content">
 
-      <div class="form-card" style="margin-bottom:20px;max-width:680px;">
-        <h3 style="font-size:14px;margin-bottom:12px;">Record a sale</h3>
-        <form id="saleForm">
-
-          <!-- What's being sold -->
-          <div class="field">
-            <label>What are you selling? *</label>
-            <div class="radio-cards item-type-toggle">
-              <label class="radio-card"><input type="radio" name="itemType" value="product" checked><span>📦 Product</span></label>
-              <label class="radio-card"><input type="radio" name="itemType" value="service"><span>🛠️ Service</span></label>
-            </div>
-          </div>
-
-          <div class="field-row" id="productPickWrap">
-            <div class="field">
-              <label for="saleProductSearch">Product *</label>
-              <div class="product-search-wrap">
-                <input type="text" id="saleProductSearch" placeholder="Type to search products…" autocomplete="off">
-                <div class="product-search-suggestions" id="saleProductSuggestions"></div>
-              </div>
-              <div class="hint" id="saleStockHint"></div>
-            </div>
-            <div class="field">
-              <label for="saleQty">Quantity *</label>
-              <input type="number" id="saleQty" min="1" value="1" required>
-            </div>
-          </div>
-
-          <div class="field-row" id="servicePickWrap" style="display:none;">
-            <div class="field">
-              <label for="saleServiceSearch">Service *</label>
-              <div class="product-search-wrap">
-                <input type="text" id="saleServiceSearch" placeholder="Type to search services…" autocomplete="off">
-                <div class="product-search-suggestions" id="saleServiceSuggestions"></div>
-              </div>
-              <div class="hint" id="saleServiceHint"></div>
-            </div>
-            <div class="field">
-              <label for="saleServiceQty">Quantity *</label>
-              <input type="number" id="saleServiceQty" min="1" value="1">
-            </div>
-          </div>
-
-          <div class="field-row">
-            <div class="field">
-              <label for="saleUnitPrice">Selling price (TSh) *</label>
-              <input type="number" id="saleUnitPrice" min="0" required>
-              <div class="hint">Auto-filled from the default price — edit to apply a discount or negotiated price.</div>
-            </div>
-            <div class="field">
-              <label for="saleDate">Sale date</label>
-              <input type="date" id="saleDate">
-            </div>
-          </div>
-          <div class="field">
-            <label for="saleNotes">Notes (optional)</label>
-            <input type="text" id="saleNotes" placeholder="e.g. bulk order for school">
-          </div>
-
-          <!-- 1. Sale Type -->
-          <div class="step-section" style="border-top:none;margin-top:4px;padding-top:4px;">
-            <h4>Sale Type *</h4>
-            <div class="radio-cards sale-type-toggle">
-              <label class="radio-card"><input type="radio" name="saleType" value="cash" checked><span>💵 Cash Sale</span></label>
-              <label class="radio-card"><input type="radio" name="saleType" value="credit"><span>🧾 Sale on Credit</span></label>
-            </div>
-          </div>
-
-          <!-- 2. Cash workflow -->
-          <div class="step-section" id="cashPaymentSection">
-            <h4>Payment Method *</h4>
-            <div class="radio-cards">
-              <label class="radio-card"><input type="radio" name="paymentChannel" value="cash_in_hand" checked><span>Cash in Hand</span></label>
-              <label class="radio-card"><input type="radio" name="paymentChannel" value="online"><span>Online Transaction</span></label>
-            </div>
-
-            <div id="onlineMethodSection" style="display:none;margin-top:12px;">
-              <label style="display:block;font-weight:700;font-size:12px;margin-bottom:5px;">Mobile Money Method *</label>
-              <div class="radio-cards">
-                <label class="radio-card"><input type="radio" name="mobileMoneyMethod" value="mpesa" checked><span>M-PESA</span></label>
-                <label class="radio-card"><input type="radio" name="mobileMoneyMethod" value="airtel_money"><span>Airtel Money</span></label>
-                <label class="radio-card"><input type="radio" name="mobileMoneyMethod" value="halopesa"><span>HaloPesa</span></label>
-                <label class="radio-card"><input type="radio" name="mobileMoneyMethod" value="mixx_by_yas"><span>Mixx by Yas</span></label>
-              </div>
-            </div>
-          </div>
-
-          <!-- 3. Credit workflow -->
-          <div class="step-section" id="creditSection" style="display:none;">
-            <h4>Credit Customer Details</h4>
-            <div class="credit-amount-box">
-              <span class="label">Credit / Sale Amount</span>
-              <span class="value" id="creditAmountDisplay">TSh 0</span>
-            </div>
-            <div class="field-row">
-              <div class="field">
-                <label for="custName">Customer Name *</label>
-                <input type="text" id="custName" placeholder="e.g. Juma Mwakisu">
-              </div>
-              <div class="field">
-                <label for="custPhone">Customer Phone Number *</label>
-                <input type="tel" id="custPhone" placeholder="e.g. 0712 345 678">
-              </div>
-            </div>
-            <div class="field">
-              <label for="custDeadline">Payment Deadline Date *</label>
-              <input type="date" id="custDeadline">
-            </div>
-            <div class="field">
-              <label for="custNotes">Notes (optional)</label>
-              <input type="text" id="custNotes" placeholder="e.g. will pay end of month">
-            </div>
-          </div>
-
-          <div id="saleAlert"></div>
-          <button type="submit" class="btn btn-primary" id="saleSaveBtn">Review &amp; Complete Sale</button>
-        </form>
+      <div class="v3-tabs">
+        <button class="v3-tab active" data-tab="pos">+ New sale</button>
+        <button class="v3-tab" data-tab="history">Sales history</button>
       </div>
 
-      <div class="panel">
-        <div class="panel-head">
-          <h3>Sales history</h3>
-          <div class="filter-row">
-            <div class="search-input-wrap" style="min-width:180px;">
-              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="20" y1="20" x2="15.5" y2="15.5"/></svg>
-              <input type="text" id="salesSearch" placeholder="Search by item name…" autocomplete="off">
+      <!-- ================= POINT OF SALE ================= -->
+      <section class="v3-panel active" id="panel-pos">
+        <div id="editBanner"></div>
+        <div class="v3-pos">
+          <div class="panel">
+            <div class="panel-head">
+              <h3>Pick items</h3>
+              <div class="filter-row">
+                <div class="item-type-toggle" id="kindToggle"><button type="button" class="active" data-kind="product">Products</button><button type="button" data-kind="service">Services</button></div>
+                <div class="search-input-wrap" style="min-width:190px;">
+                  <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6.5"/><line x1="20" y1="20" x2="15.5" y2="15.5"/></svg>
+                  <input type="text" id="pickSearch" placeholder="Search…" autocomplete="off">
+                </div>
+              </div>
             </div>
-            <select id="filterItemType">
-              <option value="">Products &amp; Services</option>
-              <option value="product">Products only</option>
-              <option value="service">Services only</option>
-            </select>
-            <input type="date" id="filterFrom">
-            <input type="date" id="filterTo">
-            <button class="btn btn-outline btn-sm" id="filterBtn">Filter</button>
+            <div class="panel-body" style="padding:14px;"><div class="v3-pick" id="pickGrid"></div></div>
+          </div>
+
+          <div class="panel v3-cart">
+            <div class="panel-head"><h3>Receipt <span class="v3-chip info" id="cartCount">0</span></h3><button class="btn btn-ghost btn-sm" id="clearCart" type="button">Clear</button></div>
+            <div class="panel-body" style="padding:14px;">
+              <div class="v3-cart-lines" id="cartLines"></div>
+              <div class="v3-carttotal"><span>Total</span><span class="t" id="cartTotal">0</span></div>
+
+              <div style="margin-top:14px;" class="sale-type-toggle" id="saleTypeToggle"><button type="button" class="active" data-type="cash">Cash sale</button><button type="button" data-type="credit">On credit</button></div>
+
+              <div id="cashBox">
+                <div class="v3-pay" id="payButtons">
+                  <button type="button" class="active" data-m="cash_in_hand">Cash in hand</button><button type="button" data-m="mpesa">M-PESA</button>
+                  <button type="button" data-m="airtel_money">Airtel Money</button><button type="button" data-m="halopesa">HaloPesa</button><button type="button" data-m="mixx_by_yas">Mixx by Yas</button>
+                </div>
+                <div id="changeBox">
+                  <div class="field-row"><div class="field"><label for="received">Cash received (TSh)</label><input type="number" id="received" min="0" placeholder="optional"></div>
+                    <div class="field"><label>Change to give</label><div class="v3-money" id="changeDue" style="padding:10px 0;font-weight:700;">0</div></div></div>
+                  <label style="display:flex;gap:8px;align-items:center;font-size:13px;margin-bottom:8px;" id="keepChangeWrap" class="v3-hidden"><input type="checkbox" id="keepChange"> Customer leaves the change with us</label>
+                </div>
+              </div>
+
+              <div id="creditBox" class="v3-hidden">
+                <div class="field"><label for="deadline">Pay by *</label><input type="date" id="deadline"></div>
+                <div class="field"><label for="creditNotes">Credit note</label><input type="text" id="creditNotes" maxlength="255" placeholder="Agreement, guarantor…"></div>
+              </div>
+
+              <div class="field-row">
+                <div class="field"><label for="custName">Customer <span id="custReq" class="v3-muted">(optional)</span></label><input type="text" id="custName" maxlength="150" placeholder="Name"></div>
+                <div class="field"><label for="custPhone">Phone</label><input type="tel" id="custPhone" maxlength="40" placeholder="07xx xxx xxx"></div>
+              </div>
+              <div id="custInfo"></div>
+              <div class="field-row">
+                <div class="field"><label for="saleDate">Date</label><input type="date" id="saleDate"></div>
+                <div class="field"><label for="saleNotes">Note</label><input type="text" id="saleNotes" maxlength="255"></div>
+              </div>
+              <div id="saleAlert"></div>
+              <button class="btn btn-primary btn-block" id="completeBtn" type="button">Complete sale</button>
+              <button class="btn btn-outline btn-block v3-hidden" id="cancelEditBtn" type="button" style="margin-top:8px;">Cancel editing</button>
+            </div>
           </div>
         </div>
-        <div class="panel-body table-wrap">
-          <table class="data-table">
-            <thead><tr><th>Date</th><th>Item</th><th>Type</th><th>Qty</th><th>Unit Price</th><th>Total</th><th>Sale</th><th>Payment</th><th>Recorded By</th><th></th></tr></thead>
-            <tbody id="salesTbody"><tr><td colspan="10" style="text-align:center;padding:30px;">Loading…</td></tr></tbody>
-          </table>
+      </section>
+
+      <!-- ================= HISTORY ================= -->
+      <section class="v3-panel" id="panel-history">
+        <div class="v3-stats" id="histStats"></div>
+        <div class="panel">
+          <div class="panel-head">
+            <h3>Sales history</h3>
+            <div class="filter-row">
+              <input type="date" id="hFrom"><input type="date" id="hTo">
+              <select id="hType" style="padding:9px 11px;border:1.5px solid var(--line-soft);border-radius:10px;background:#fff;"><option value="">All sales</option><option value="cash">Cash</option><option value="credit">Credit</option></select>
+              <input type="text" id="hSearch" placeholder="Item, receipt, customer…" style="padding:9px 11px;border:1.5px solid var(--line-soft);border-radius:10px;">
+              <button class="btn btn-outline btn-sm" id="hGo">Filter</button>
+            </div>
+          </div>
+          <div class="panel-body table-wrap">
+            <table class="data-table">
+              <thead><tr><th>Date</th><th>Receipt</th><th>Items</th><th>Customer</th><th>Payment</th><th>Total</th><th>By</th><th></th></tr></thead>
+              <tbody id="histRows"><tr><td colspan="8" class="text-center" style="padding:30px;">Loading…</td></tr></tbody>
+            </table>
+          </div>
         </div>
-      </div>
+      </section>
 
     </div>
   </div>
 </div>
 
-<!-- Confirmation modal shown before a sale is finalized (create) -->
-<div class="modal-backdrop" id="saleConfirmBackdrop">
-  <div class="modal">
-    <div class="modal-head">
-      <h3 id="saleConfirmTitle">Confirm Sale</h3>
-      <button class="modal-close" id="saleConfirmClose">&times;</button>
-    </div>
-    <div class="modal-body">
-      <div class="debt-detail-grid" id="saleConfirmGrid"></div>
-      <div id="saleConfirmAlert"></div>
-      <button class="btn btn-primary btn-block" id="saleConfirmBtn">Confirm &amp; Complete Sale</button>
+<div class="modal-backdrop" id="doneModal"><div class="modal" style="max-width:420px;text-align:center;">
+  <div class="modal-body" style="padding:30px 24px;">
+    <div style="width:64px;height:64px;border-radius:50%;background:var(--emerald-tint);color:var(--emerald);display:grid;place-items:center;margin:0 auto 12px;animation:v3Pop .5s both;">✓</div>
+    <h3 style="margin:0 0 4px;" id="doneTitle">Sale recorded</h3>
+    <p class="v3-muted" id="doneSub"></p>
+    <div style="display:flex;gap:8px;justify-content:center;margin-top:16px;flex-wrap:wrap;">
+      <a class="btn btn-primary" id="doneReceipt" href="#">View receipt</a>
+      <button class="btn btn-outline" onclick="adminCloseModal('doneModal')">New sale</button>
     </div>
   </div>
-</div>
-
-<!-- Edit sale modal -->
-<div class="modal-backdrop" id="editSaleBackdrop">
-  <div class="modal" style="max-width:640px;">
-    <div class="modal-head">
-      <h3>Edit Sale</h3>
-      <button class="modal-close" id="editSaleClose">&times;</button>
-    </div>
-    <div class="modal-body">
-      <form id="editSaleForm">
-        <input type="hidden" id="e_id">
-
-        <div class="field">
-          <label>What are you selling? *</label>
-          <div class="radio-cards item-type-toggle">
-            <label class="radio-card"><input type="radio" name="e_itemType" value="product" checked><span>📦 Product</span></label>
-            <label class="radio-card"><input type="radio" name="e_itemType" value="service"><span>🛠️ Service</span></label>
-          </div>
-        </div>
-
-        <div class="field-row" id="e_productPickWrap">
-          <div class="field">
-            <label for="e_productSearch">Product *</label>
-            <div class="product-search-wrap">
-              <input type="text" id="e_productSearch" placeholder="Type to search products…" autocomplete="off">
-              <div class="product-search-suggestions" id="e_productSuggestions"></div>
-            </div>
-            <div class="hint" id="e_stockHint"></div>
-          </div>
-          <div class="field">
-            <label for="e_qty">Quantity *</label>
-            <input type="number" id="e_qty" min="1" value="1" required>
-          </div>
-        </div>
-
-        <div class="field-row" id="e_servicePickWrap" style="display:none;">
-          <div class="field">
-            <label for="e_serviceSearch">Service *</label>
-            <div class="product-search-wrap">
-              <input type="text" id="e_serviceSearch" placeholder="Type to search services…" autocomplete="off">
-              <div class="product-search-suggestions" id="e_serviceSuggestions"></div>
-            </div>
-          </div>
-          <div class="field">
-            <label for="e_serviceQty">Quantity *</label>
-            <input type="number" id="e_serviceQty" min="1" value="1">
-          </div>
-        </div>
-
-        <div class="field-row">
-          <div class="field">
-            <label for="e_unitPrice">Selling price (TSh) *</label>
-            <input type="number" id="e_unitPrice" min="0" required>
-          </div>
-          <div class="field">
-            <label for="e_date">Sale date</label>
-            <input type="date" id="e_date">
-          </div>
-        </div>
-        <div class="field">
-          <label for="e_notes">Notes (optional)</label>
-          <input type="text" id="e_notes">
-        </div>
-
-        <div class="step-section" style="border-top:none;margin-top:4px;padding-top:4px;">
-          <h4>Sale Type *</h4>
-          <div class="radio-cards sale-type-toggle">
-            <label class="radio-card"><input type="radio" name="e_saleType" value="cash" checked><span>💵 Cash Sale</span></label>
-            <label class="radio-card"><input type="radio" name="e_saleType" value="credit"><span>🧾 Sale on Credit</span></label>
-          </div>
-        </div>
-
-        <div class="step-section" id="e_cashPaymentSection">
-          <h4>Payment Method *</h4>
-          <div class="radio-cards">
-            <label class="radio-card"><input type="radio" name="e_paymentChannel" value="cash_in_hand" checked><span>Cash in Hand</span></label>
-            <label class="radio-card"><input type="radio" name="e_paymentChannel" value="online"><span>Online Transaction</span></label>
-          </div>
-          <div id="e_onlineMethodSection" style="display:none;margin-top:12px;">
-            <label style="display:block;font-weight:700;font-size:12px;margin-bottom:5px;">Mobile Money Method *</label>
-            <div class="radio-cards">
-              <label class="radio-card"><input type="radio" name="e_mobileMoneyMethod" value="mpesa" checked><span>M-PESA</span></label>
-              <label class="radio-card"><input type="radio" name="e_mobileMoneyMethod" value="airtel_money"><span>Airtel Money</span></label>
-              <label class="radio-card"><input type="radio" name="e_mobileMoneyMethod" value="halopesa"><span>HaloPesa</span></label>
-              <label class="radio-card"><input type="radio" name="e_mobileMoneyMethod" value="mixx_by_yas"><span>Mixx by Yas</span></label>
-            </div>
-          </div>
-        </div>
-
-        <div class="step-section" id="e_creditSection" style="display:none;">
-          <h4>Credit Customer Details</h4>
-          <div class="field-row">
-            <div class="field">
-              <label for="e_custName">Customer Name *</label>
-              <input type="text" id="e_custName">
-            </div>
-            <div class="field">
-              <label for="e_custPhone">Customer Phone Number *</label>
-              <input type="tel" id="e_custPhone">
-            </div>
-          </div>
-          <div class="field">
-            <label for="e_custDeadline">Payment Deadline Date *</label>
-            <input type="date" id="e_custDeadline">
-          </div>
-          <div class="field">
-            <label for="e_custNotes">Notes (optional)</label>
-            <input type="text" id="e_custNotes">
-          </div>
-        </div>
-
-        <div id="editSaleAlert"></div>
-        <button type="submit" class="btn btn-primary btn-block" id="editSaleSaveBtn">Save Changes</button>
-      </form>
-    </div>
-  </div>
-</div>
+</div></div>
 
 <script src="admin-core.js"></script>
 <script src="admin-sales.js"></script>
